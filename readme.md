@@ -54,19 +54,20 @@ Basic Cloud Service
 ~  
 
 1. user_id 유저 아이디  유저마다 고유한 식별자 이다.
-2. user_nickname 유저 닉네임  유저마다 비고유한 닉네임을 가진다.
-3. user_ciphertext 암호화된 패스워드  
-4. userkey 16자리 개발자가 정해야하는 비밀키  
-5. file_id 파일 식별 넘버. 모든 유저들의 파일들 사이에서 파일을 고유 식별한다.
-6. file_name 파일 이름. 특정 유저의 개인 저장소내에서는 고유하나 전체유저 사이에서는 고유하지 않다.
-7. uploaded_file 업로드된 파일 자체  
-8. file_extension 파일 확장자  
-9. uploaded_date 업로드된 날짜, 시간  
-10. file_comment 파일의 부연설명  개인 저장소 내에서도 고유하지 않다.
-11. file_size 파일 크기  
-12. imagesize 이미지의 경우 해상도  
+2. user_ciphertext 암호화된 패스워드  
+3. userkey 16자리 개발자가 정해야하는 비밀키  
+4. file_id 파일 식별 넘버. 모든 유저들의 파일들 사이에서 파일을 고유 식별한다.
+5. file_name 파일 이름. 특정 유저의 개인 저장소내에서는 고유하나 전체유저 사이에서는 고유하지 않다.
+6. uploaded_file 업로드된 파일 자체  
+7. file_extension 파일 확장자  
+8. uploaded_date 업로드된 날짜, 시간  
+9.  file_comment 파일의 부연설명  개인 저장소 내에서도 고유하지 않다.
+10. file_size 파일 크기  
+11. imagesize 이미지의 경우 해상도  
 
-user_info : user_id(PK), nickname, ciphertext
+user_info : user_id(PK), ciphertext
+
+user_key : user_id(PK), userkey
 
 
 PK : user_id + file_id
