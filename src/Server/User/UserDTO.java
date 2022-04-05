@@ -1,25 +1,21 @@
-package src.User;
-
-/* user_info : user_id(PK), nickname, ciphertext */
+package src.Server.User;
 
 public class UserDTO {
 
   private String userID;
-  private String userNickname;
   private String ciphertext;
 
-  public UserDTO(String userID, String userNickname) {
+  public UserDTO(String userID, String ciphertext) {
     this.userID = userID;
-    this.userNickname = userNickname;
+    this.ciphertext = ciphertext;
+  }
+  public UserDTO(String userID) {
+    this.userID = userID;
   }
 
   public String getUserID() { return userID; }
 
   public void setUserID(String userID) { this.userID = userID; }
-
-  public String getUserNickname() { return userNickname; }
-
-  public void setUserNickname(String userNick) { this.userNickname = userNick; }
 
   public String getCiphertext() { return ciphertext; }
 
