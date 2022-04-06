@@ -1,5 +1,6 @@
-package src.GuiComponents;
+package GuiComponents;
 
+import Client.ClientSocket;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
@@ -15,8 +16,6 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
-
-import src.Client.ClientSocket;
 
 class HintTextField extends JTextField {
 
@@ -77,7 +76,7 @@ public class InitialScreen extends JFrame implements LoginFrameSetable {
     private HintTextField PWtextField = new HintTextField("User PW");
 
     private JLabel kakaoMark = new JLabel(new ImageIcon(
-        "/Users/nicode./MainSpace/vscodecpp/JavaGUIProject/src/GuiComponents/imgs/kakao.png"));
+        "/Users/nicode./MainSpace/vscodeworkspace/JavaCloudProject/src/GuiComponents/imgs/kakao.png"));
 
     private JButton loginbtn = new JButton("Login");
     private JLabel SignUpLabel = new JLabel("SignUp");
@@ -101,12 +100,13 @@ public class InitialScreen extends JFrame implements LoginFrameSetable {
           try {
             c = new ClientSocket(LOCALHOST, PORT);
             c.sender("userlogin " + iiiddd + " " + pppwww);
-            if (c.receiver() < 0) {
+            if (c.numberReceiver() < 0) {
               JOptionPane.showMessageDialog(null, "id or pw is not exists!",
                                             "omg", 2);
             } else {
+              c.sender("filelist " + iiiddd);
               dispose();
-              new MainFrame(iiiddd, c);
+              new MainFrame(iiiddd, c, c.stringReceiver());
             }
           } catch (Exception eee) {
             eee.printStackTrace();
@@ -130,7 +130,7 @@ public class InitialScreen extends JFrame implements LoginFrameSetable {
       setFocusable(true);
     }
   }
-  
+
   public InitialScreen() {
     this.setTitle("Basic Cloud - login");
     this.setLayout(null);
@@ -146,4 +146,5 @@ public class InitialScreen extends JFrame implements LoginFrameSetable {
 
 /* 데이터 베이스에 대형 객체 저장 하기 */
 /* 업로드, 다운로드 기능 */
-/* 클라이언트의 화면에 유저가 업로드한 파일들을 표시해주기 위해 데이터를 어떤 양식으로 주고 받을것인지 (즉 리퀘스트 핸들러의 문제가 되시겠다.) */
+/* 클라이언트의 화면에 유저가 업로드한 파일들을 표시해주기 위해 데이터를 어떤
+ * 양식으로 주고 받을것인지 (즉 리퀘스트 핸들러의 문제가 되시겠다.) */

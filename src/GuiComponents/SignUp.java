@@ -1,4 +1,4 @@
-package src.GuiComponents;
+package GuiComponents;
 
 import java.awt.Color;
 import java.awt.Font;
@@ -11,7 +11,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 
-import src.Client.ClientSocket;
+import Client.ClientSocket;
 
 interface SignUpFrameSetable {
   public final int SIGNUPFRAMEWIDTH = 300;
@@ -55,7 +55,7 @@ public class SignUp extends JFrame implements SignUpFrameSetable {
         if ((8 <= idlen && idlen <= 13) && (10 <= pwlen && pwlen <= 15)) {
           try {
             c.sender("usersignup " + id + " " + pw);
-            int resultNum = c.receiver();
+            int resultNum = c.numberReceiver();
             if (resultNum < 0) {
               JOptionPane.showMessageDialog(null, "id overlap", "error", 2);
             } else if (resultNum >= 0) {

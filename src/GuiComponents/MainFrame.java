@@ -1,5 +1,6 @@
-package src.GuiComponents;
+package GuiComponents;
 
+import Client.ClientSocket;
 import java.awt.Color;
 import java.awt.FlowLayout;
 import java.awt.Graphics;
@@ -17,8 +18,6 @@ import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
-
-import src.Client.ClientSocket;
 
 class FileChooserTest extends JFrame implements ActionListener {
   private JFileChooser fileComponent = new JFileChooser();
@@ -70,25 +69,25 @@ interface setable {
 }
 
 public class MainFrame extends JFrame implements setable {
-  private final String id;
+  private final String connected_user_id;
   private ClientSocket c;
 
-  public MainFrame(final String id, final ClientSocket c) {
-    this.id = id;
-	this.c = c;
+  public MainFrame(final String id, final ClientSocket c,
+                   final String filelistResponse) {
+    this.connected_user_id = id;
+    this.c = c;
     this.setTitle("Basic Cloud");
     this.setLayout(null);
     this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     this.setLocationRelativeTo(getOwner());
-    this.setContentPane(new MainPanel());
+    this.setContentPane(new MainPanel(filelistResponse));
     this.setResizable(false);
     this.setSize(FRAMEWIDTH, FRAMEHEIGHT);
     setVisible(true);
   }
   private class MainPanel extends JPanel {
 
-    JList fileList;
-    private DefaultListModel model;
+    JList<String> fileList;
     private JMenuBar menubar;
     private JMenu menu;
     private JMenuItem logout;
@@ -101,7 +100,7 @@ public class MainFrame extends JFrame implements setable {
       g.drawImage(background, 0, 0, null);
     }
 
-    public MainPanel() {
+    public MainPanel(final String filelistResponse) {
 
       this.setSize(FRAMEWIDTH, FRAMEHEIGHT);
       this.setLayout(null);
@@ -113,21 +112,27 @@ public class MainFrame extends JFrame implements setable {
       logout.addActionListener(new ActionListener() {
         @Override
         public void actionPerformed(ActionEvent e) {
-			c.sender("desconnect");
-			c.desconnect();
-			dispose();
-			new InitialScreen();
-		}
+          c.sender("desconnect");
+          c.desconnect();
+          dispose();
+          new InitialScreen();
+        }
       });
       menu.add(logout);
       setJMenuBar(menubar);
 
-      model = new DefaultListModel();
-      fileList = new JList(model);
+      fileList = new JList<String>(new DefaultListModel());
+      DefaultListModel<String> model =
+          (DefaultListModel<String>)fileList.getModel();
+      String[] fileMetadataArray = filelistResponse.split(" ");
 
-      model.addElement("element 1");
-      model.addElement("element 2");
-      model.addElement("element 3");
+      if (Integer.parseInt(fileMetadataArray[0]) == -1) {
+
+      } else {
+        for (int idx = 1; idx < fileMetadataArray.length; idx++) {
+          model.addElement(fileMetadataArray[idx]);
+        }
+      }
 
       fileList.setBounds(20, 30, 200, 400);
       fileList.setBackground(jlistBackgroundColor);
@@ -142,8 +147,4 @@ public class MainFrame extends JFrame implements setable {
   }
 
   class DetailedInformationLabel extends JLabel {}
-  public static void main(String[] args) throws Exception {
-    new MainFrame("id", new ClientSocket("fe", 23));
-  }
 }
-

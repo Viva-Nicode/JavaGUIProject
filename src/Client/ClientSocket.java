@@ -1,4 +1,4 @@
-package src.Client;
+package Client;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -30,7 +30,7 @@ public class ClientSocket {
     }
   }
 
-  public int receiver() {
+  public int numberReceiver() {
     String response = "";
     try {
       while (true) {
@@ -43,10 +43,23 @@ public class ClientSocket {
     }
     return Integer.parseInt(response);
   }
+  
+  public String stringReceiver() {
+    String response = "";
+    try {
+      while (true) {
+        if ((response = in.readLine()) != null)
+          break;
+      }
+      return response;
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+    return response;
+  }
 
   public void desconnect() {
     try {
-
       socket.close();
     } catch (Exception e) {
       e.printStackTrace();
