@@ -1,9 +1,9 @@
-package src.Server.Util;
+package Server.Util;
 
 import java.net.Socket;
 
-import src.Server.User.UserDAO;
-import src.Server.User.UserDTO;
+import Server.User.UserDAO;
+import Server.User.UserDTO;
 
 public class RequestHandler {
 	public static int requestHandler(final Socket so, final String request) {

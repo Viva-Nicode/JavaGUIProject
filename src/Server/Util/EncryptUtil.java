@@ -1,4 +1,4 @@
-package src.Server.Util;
+package Server.Util;
 
 import java.io.UnsupportedEncodingException;
 import java.security.GeneralSecurityException;

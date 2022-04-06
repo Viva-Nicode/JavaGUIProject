@@ -1,4 +1,4 @@
-package src.Server.ServerModules;
+package Server.ServerModules;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -7,7 +7,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
 
-import src.Server.Util.RequestHandler;
+import Server.Util.RequestHandler;
 
 public class ConnectionSocket implements Runnable {
 

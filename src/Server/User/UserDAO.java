@@ -1,11 +1,11 @@
-package src.Server.User;
+package Server.User;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 
-import src.Server.Util.DatabaseUtil;
-import src.Server.Util.EncryptUtil;
+import Server.Util.DatabaseUtil;
+import Server.Util.EncryptUtil;
 
 
 /* Love ain't a science Don't need no license 머리 싸매고 고민 할수록 minus */

@@ -1,4 +1,4 @@
-package src.Server.User;
+package Server.User;
 
 public class UserDTO {
 
