@@ -1,8 +1,9 @@
 package GuiComponents;
 
-import Client.ClientSocket;
+import Client.ClientSocketIOObject;
+import Server.File.FileDTO;
+import Server.File.FileDTOList;
 import java.awt.Color;
-import java.awt.FlowLayout;
 import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.event.ActionEvent;
@@ -19,48 +20,18 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 
-class FileChooserTest extends JFrame implements ActionListener {
+/* class FileChooser {
+
   private JFileChooser fileComponent = new JFileChooser();
-  private JButton btnOpen = new JButton("열기");
-  private JButton btnSave = new JButton("저장");
-  private JLabel labelOpen = new JLabel(" ");
-  private JLabel labelSave = new JLabel(" ");
 
-  public FileChooserTest() {
-    this.init();
-    this.start();
-    this.setSize(500, 300);
-    this.setVisible(true);
-  }
+  public FileChooser(DefaultListModel<String> model) {
 
-  public void init() {
-    getContentPane().setLayout(new FlowLayout());
-    add(btnOpen);
-    add(btnSave);
-    add(labelOpen);
-    add(labelSave);
-  }
-  public void start() {
-    btnOpen.addActionListener(this);
-    btnSave.addActionListener(this);
-    /* fileComponent.setFileFilter(new FileNameExtensionFilter(
-        "xlsx", "xlsx", "xls")); */
-    fileComponent.setMultiSelectionEnabled(false); // 다중 선택 불가 설정
-  }
-  public void actionPerformed(ActionEvent arg0) {
-    if (arg0.getSource() == btnOpen) {
-      if (fileComponent.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-        labelOpen.setText("열기 파일 경로 : " +
-                          fileComponent.getSelectedFile().toString());
-      }
-    } else if (arg0.getSource() == btnSave) {
-      if (fileComponent.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
-        labelSave.setText("저장 파일 경로 : " +
-                          fileComponent.getSelectedFile().toString());
-      }
+    int ret = fileComponent.showOpenDialog(null);
+    if (ret == JFileChooser.APPROVE_OPTION) {
+      model.addElement(fileComponent.getSelectedFile().toString());
     }
   }
-}
+} */
 
 interface setable {
   public final int FRAMEWIDTH = 1024;
@@ -70,9 +41,9 @@ interface setable {
 
 public class MainFrame extends JFrame implements setable {
   private final String connected_user_id;
-  private ClientSocket c;
+  private ClientSocketIOObject c;
 
-  public MainFrame(final String id, final ClientSocket c,
+  public MainFrame(final String id, final ClientSocketIOObject c,
                    final String filelistResponse) {
     this.connected_user_id = id;
     this.c = c;
@@ -85,12 +56,16 @@ public class MainFrame extends JFrame implements setable {
     this.setSize(FRAMEWIDTH, FRAMEHEIGHT);
     setVisible(true);
   }
+
   private class MainPanel extends JPanel {
 
     JList<String> fileList;
     private JMenuBar menubar;
     private JMenu menu;
     private JMenuItem logout;
+    private JButton uploadButton;
+    private FileDTOList fileDTOlist;
+    JFileChooser fileComponent;
 
     Image background =
         new ImageIcon(MainPanel.class.getResource("./imgs/bgimg.jpg"))
@@ -115,24 +90,48 @@ public class MainFrame extends JFrame implements setable {
           c.sender("desconnect");
           c.desconnect();
           dispose();
-          new InitialScreen();
+          new LoginFrame();
         }
       });
+
       menu.add(logout);
       setJMenuBar(menubar);
 
+      uploadButton = new JButton("upload");
+
       fileList = new JList<String>(new DefaultListModel());
+
       DefaultListModel<String> model =
           (DefaultListModel<String>)fileList.getModel();
+
       String[] fileMetadataArray = filelistResponse.split(" ");
 
-      if (Integer.parseInt(fileMetadataArray[0]) == -1) {
+      uploadButton.setBounds(240, 50, 240, 40);
+      uploadButton.addActionListener(new ActionListener() {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+          fileComponent = new JFileChooser();
+          int ret = fileComponent.showOpenDialog(null);
+          if (ret == JFileChooser.APPROVE_OPTION) {
+            model.addElement(fileComponent.getSelectedFile().toString());
+          }
+        }
+      });
 
+      if (Integer.parseInt(fileMetadataArray[0]) == -1) {
+        model.addElement("not exist any file..!");
       } else {
-        for (int idx = 1; idx < fileMetadataArray.length; idx++) {
-          model.addElement(fileMetadataArray[idx]);
+        fileDTOlist = new FileDTOList();
+        for (int idx = 1; idx < fileMetadataArray.length; idx = idx + 6) {
+          fileDTOlist.add(new FileDTO(
+              Integer.parseInt(fileMetadataArray[idx]),
+              fileMetadataArray[idx + 1], fileMetadataArray[idx + 2],
+              Integer.parseInt(fileMetadataArray[idx + 3]),
+              fileMetadataArray[idx + 4], fileMetadataArray[idx + 5]));
+          model.addElement(fileMetadataArray[idx + 1]);
         }
       }
+      /*responseNumber (int file_id) name extention (int size) date comment*/
 
       fileList.setBounds(20, 30, 200, 400);
       fileList.setBackground(jlistBackgroundColor);
@@ -140,6 +139,7 @@ public class MainFrame extends JFrame implements setable {
       fileList.setFixedCellHeight(20);
 
       add(fileList);
+      add(uploadButton);
 
       requestFocus();
       setFocusable(true);

@@ -26,6 +26,7 @@ public class RequestHandler {
         if (l == null)
           return new ResponseObject(-1);
         return new ResponseObject(0, l);
+      } else if (s[0].equals("upload")) {
       }
 
     } catch (Exception e) {
@@ -51,8 +52,8 @@ class ResponseObject {
 
   @Override
   public String toString() {
-	if(l == null)
-		return responseNumber + "";
+    if (l == null)
+      return responseNumber + "";
     return responseNumber + " " + l;
   }
 }
