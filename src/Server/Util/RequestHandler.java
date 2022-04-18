@@ -1,59 +1,34 @@
 package Server.Util;
 
+import Client.SendReceiveSerializationObject;
 import Server.File.FileDAO;
-import Server.File.FileDTOList;
 import Server.User.UserDAO;
-import Server.User.UserDTO;
 import java.net.Socket;
 
 public class RequestHandler {
 
-  public static ResponseObject requestHandler(final Socket so,
-                                              final String request) {
-    String[] s = request.split(" ");
-
+  public static SendReceiveSerializationObject
+  requestHandler(final Socket so, final SendReceiveSerializationObject o) {
+    final int TIN = o.getTaskIdentificationNumber();
     try {
-      if (s[0].equals("usersignup"))
-        return new ResponseObject(UserDAO.userSignup(new UserDTO(s[1]), s[2]));
-      else if (s[0].equals("userlogin"))
-        return new ResponseObject(UserDAO.userLogin(new UserDTO(s[1]), s[2]));
-      else if (s[0].equals("desconnect")) {
+      if (TIN == SendReceiveSerializationObject._USER_SIGNUP_REQUEST)
+        return UserDAO.userSignup(o.getUserDTO());
+      else if (TIN == SendReceiveSerializationObject._USER_LOGIN_REQUEST)
+        return UserDAO.userLogin(o.getUserDTO());
+      else if (TIN == SendReceiveSerializationObject._DESCONNECT_REQUEST) {
         if (so.isConnected())
           so.close();
-        return new ResponseObject(0);
-      } else if (s[0].equals("filelist")) {
-        FileDTOList l = FileDAO.getFilelist(s[1]);
-        if (l == null)
-          return new ResponseObject(-1);
-        return new ResponseObject(0, l);
-      } else if (s[0].equals("upload")) {
+        return new SendReceiveSerializationObject(
+            SendReceiveSerializationObject._REQUEST_SUCCESSFULLY_PROCESSED);
+      } else if (TIN == SendReceiveSerializationObject._FILELIST_REQUEST) {
+        return FileDAO.getFilelist(o.getUserDTO().getUserID());
+      } else if (TIN == SendReceiveSerializationObject._FILEUPLOAD_REQUEST) {
+        return FileDAO.insertuploadedfile(so, o);
       }
-
     } catch (Exception e) {
       e.printStackTrace();
     }
     return null;
   }
 }
-
-class ResponseObject {
-  private int responseNumber;
-  private FileDTOList l;
-
-  public ResponseObject(int responseNumber, FileDTOList l) {
-    this.responseNumber = responseNumber;
-    this.l = l;
-  }
-
-  public ResponseObject(int responseNumber) {
-    this.responseNumber = responseNumber;
-    l = null;
-  }
-
-  @Override
-  public String toString() {
-    if (l == null)
-      return responseNumber + "";
-    return responseNumber + " " + l;
-  }
-}
+/* 각종 DAO들안에 구현된 static 함수들은 직렬화 클래스를 반환해야함 */

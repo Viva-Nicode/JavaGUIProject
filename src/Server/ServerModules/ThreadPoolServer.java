@@ -18,8 +18,9 @@ public class ThreadPoolServer {
       while (true) {
         System.out.println("Waiting Connection...");
         Socket s = listener.accept();
+        System.out.println("pid : "  + ProcessHandle.current().pid());
         threadpool.execute(new ServerSocketIOObject(s));
-        System.out.println(s.getLocalAddress() + " is success to Connect");
+        System.out.println(s.getLocalAddress() + " is Connect");
       }
     }
   }

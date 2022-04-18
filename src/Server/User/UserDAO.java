@@ -1,12 +1,13 @@
 package Server.User;
 
+import Client.SendReceiveSerializationObject;
+import Server.Util.DatabaseUtil;
+import Server.Util.EncryptUtil;
+import java.io.UnsupportedEncodingException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-
-import Server.Util.DatabaseUtil;
-import Server.Util.EncryptUtil;
-
+import java.sql.SQLException;
 
 /* Love ain't a science Don't need no license 머리 싸매고 고민 할수록 minus */
 
@@ -38,9 +39,9 @@ public class UserDAO {
     } else
       return false;
   }
-    
-  public static int userSignup(final UserDTO user, final String password)
-      throws Exception {
+
+  public static SendReceiveSerializationObject userSignup(final UserDTO user)
+      throws SQLException, UnsupportedEncodingException, Exception {
 
     EncryptUtil e = new EncryptUtil();
 
@@ -50,13 +51,15 @@ public class UserDAO {
     Connection connection = DatabaseUtil.getConnection();
 
     if (isOverlapUserid(user.getUserID())) {
-      return -1; // 아이디 중복이면 -1 반환
+      return new SendReceiveSerializationObject( // id is overlap
+          SendReceiveSerializationObject._REQUEST_NOT_PROCESSED_PROPERLY);
     } else {
       PreparedStatement pre =
           connection.prepareStatement(insert_User_Info_Query);
 
       pre.setString(1, user.getUserID());
-      pre.setString(2, new String(e.encryptsion(password), "UTF-8"));
+      pre.setString(
+          2, new String(e.encryptsion(user.getplainPasswordText()), "UTF-8"));
 
       if (pre.executeUpdate() == 1) {
         pre = connection.prepareStatement(insert_User_key_Query);
@@ -65,12 +68,17 @@ public class UserDAO {
         pre.setString(2, e.getiv());
       }
       // 쿼리가 정상 처리 되었다면(정상 회원가입되었다면) 1 반환
-      return pre.executeUpdate();
+      if (pre.executeUpdate() == 1) {
+        return new SendReceiveSerializationObject(
+            SendReceiveSerializationObject._REQUEST_SUCCESSFULLY_PROCESSED);
+      }
     }
+    return new SendReceiveSerializationObject(
+        SendReceiveSerializationObject._REQUEST_NOT_PROCESSED_PROPERLY);
   }
 
-  public static int userLogin(final UserDTO user, final String password)
-      throws Exception {
+  public static SendReceiveSerializationObject userLogin(final UserDTO user)
+      throws SQLException, UnsupportedEncodingException, Exception {
 
     if (isOverlapUserid(user.getUserID())) {
 
@@ -86,19 +94,23 @@ public class UserDAO {
       preforcheckedoverlap.setString(1, iddd);
 
       rs = preforcheckedoverlap.executeQuery();
-	  rs.next();
+      rs.next();
       EncryptUtil e = new EncryptUtil(rs.getString(1));
 
-      if (new String(e.encryptsion(password), "UTF-8").equals(ciphertext)) {
+      if (new String(e.encryptsion(user.getplainPasswordText()), "UTF-8")
+              .equals(ciphertext)) {
         /* 아디 비번 정상 존재하다면 0 반환 */
-		return 0;
+        return new SendReceiveSerializationObject(
+            SendReceiveSerializationObject._REQUEST_SUCCESSFULLY_PROCESSED);
       } else {
         /* 아이디 있지만 비번 없으면 -1 반환 */
-		return -1;
+        return new SendReceiveSerializationObject(
+            SendReceiveSerializationObject._REQUEST_NOT_PROCESSED_PROPERLY);
       }
     } else {
       /* 아이디 조차 없으면 -2 반환 */
-      return -2;
+      return new SendReceiveSerializationObject(
+          SendReceiveSerializationObject._REQUEST_NOT_PROCESSED_PROPERLY);
     }
   }
 }

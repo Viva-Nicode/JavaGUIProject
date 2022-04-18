@@ -1,23 +1,23 @@
 package Server.User;
 
-public class UserDTO {
+import java.io.Serializable;
+
+public class UserDTO implements Serializable{
 
   private String userID;
-  private String ciphertext;
+  private String plainPasswordText;
 
-  public UserDTO(String userID, String ciphertext) {
+  public UserDTO(String userID, String plainPasswordText) {
     this.userID = userID;
-    this.ciphertext = ciphertext;
+    this.plainPasswordText = plainPasswordText;
   }
+  
   public UserDTO(String userID) {
     this.userID = userID;
+    plainPasswordText = null;
   }
 
   public String getUserID() { return userID; }
 
-  public void setUserID(String userID) { this.userID = userID; }
-
-  public String getCiphertext() { return ciphertext; }
-
-  public void setCiphertext(String ciphertext) { this.ciphertext = ciphertext; }
+  public String getplainPasswordText() { return plainPasswordText; }
 };

@@ -1,57 +1,65 @@
 package GuiComponents;
 
 import Client.ClientSocketIOObject;
+import Client.SendReceiveSerializationObject;
 import Server.File.FileDTO;
-import Server.File.FileDTOList;
+import Server.File.FileDTOVector;
+import Server.User.UserDTO;
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
+import java.util.Optional;
+import javax.lang.model.util.ElementScanner14;
 import javax.swing.DefaultListModel;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
-
-/* class FileChooser {
-
-  private JFileChooser fileComponent = new JFileChooser();
-
-  public FileChooser(DefaultListModel<String> model) {
-
-    int ret = fileComponent.showOpenDialog(null);
-    if (ret == JFileChooser.APPROVE_OPTION) {
-      model.addElement(fileComponent.getSelectedFile().toString());
-    }
-  }
-} */
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.PlainDocument;
 
 interface setable {
-  public final int FRAMEWIDTH = 1024;
-  public final int FRAMEHEIGHT = 768;
+  public final int FRAMEWIDTH = 650;
+  public final int FRAMEHEIGHT = 600;
   public final Color jlistBackgroundColor = new Color(0x8977ad);
 }
 
 public class MainFrame extends JFrame implements setable {
+
   private final String connected_user_id;
   private ClientSocketIOObject c;
+  private JList<String> fileList;
+  private SendReceiveSerializationObject o;
 
   public MainFrame(final String id, final ClientSocketIOObject c,
-                   final String filelistResponse) {
+                   final SendReceiveSerializationObject o) {
     this.connected_user_id = id;
     this.c = c;
-    this.setTitle("Basic Cloud");
+    this.o = o;
+    this.setTitle("kakao Cloud");
     this.setLayout(null);
     this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     this.setLocationRelativeTo(getOwner());
-    this.setContentPane(new MainPanel(filelistResponse));
+    this.setContentPane(new MainPanel());
     this.setResizable(false);
     this.setSize(FRAMEWIDTH, FRAMEHEIGHT);
     setVisible(true);
@@ -59,14 +67,30 @@ public class MainFrame extends JFrame implements setable {
 
   private class MainPanel extends JPanel {
 
-    JList<String> fileList;
     private JMenuBar menubar;
     private JMenu menu;
     private JMenuItem logout;
     private JButton uploadButton;
-    private FileDTOList fileDTOlist;
+    private FileDTOVector fileDTOvector;
+    private String extention = "";
     JFileChooser fileComponent;
 
+    /* refersh fileDTOvector */
+    public void getcurrentfilelist(DefaultListModel<String> model)
+        throws ClassNotFoundException, IOException {
+      c.sender(new SendReceiveSerializationObject(
+          SendReceiveSerializationObject._FILELIST_REQUEST,
+          new UserDTO(connected_user_id)));
+      SendReceiveSerializationObject o =
+          (SendReceiveSerializationObject)c.Receiver();
+      if (o.getTaskIdentificationNumber() ==
+          SendReceiveSerializationObject._REQUEST_SUCCESSFULLY_PROCESSED) {
+        fileDTOvector = o.getFileList();
+        for (FileDTO f : fileDTOvector)
+          model.addElement(f.getFile_name());
+      } else
+        model.addElement("not exist any file..!");
+    }
     Image background =
         new ImageIcon(MainPanel.class.getResource("./imgs/bgimg.jpg"))
             .getImage();
@@ -75,11 +99,18 @@ public class MainFrame extends JFrame implements setable {
       g.drawImage(background, 0, 0, null);
     }
 
-    public MainPanel(final String filelistResponse) {
+    public static Optional<String>
+    getExtensionByStringHandling(String filename) {
+      return Optional.ofNullable(filename)
+          .filter(f -> f.contains("."))
+          .map(f -> f.substring(filename.lastIndexOf(".") + 1));
+    }
+
+    public MainPanel() {
 
       this.setSize(FRAMEWIDTH, FRAMEHEIGHT);
       this.setLayout(null);
-
+      this.fileDTOvector = o.getFileList();
       menubar = new JMenuBar();
       menu = new JMenu("MENU");
       menubar.add(menu);
@@ -87,7 +118,8 @@ public class MainFrame extends JFrame implements setable {
       logout.addActionListener(new ActionListener() {
         @Override
         public void actionPerformed(ActionEvent e) {
-          c.sender("desconnect");
+          c.sender(new SendReceiveSerializationObject(
+              SendReceiveSerializationObject._DESCONNECT_REQUEST));
           c.desconnect();
           dispose();
           new LoginFrame();
@@ -104,7 +136,12 @@ public class MainFrame extends JFrame implements setable {
       DefaultListModel<String> model =
           (DefaultListModel<String>)fileList.getModel();
 
-      String[] fileMetadataArray = filelistResponse.split(" ");
+      if (o.getTaskIdentificationNumber() ==
+          SendReceiveSerializationObject._REQUEST_SUCCESSFULLY_PROCESSED) {
+        for (FileDTO f : fileDTOvector)
+          model.addElement(f.getFile_name());
+      } else
+        model.addElement("not exist any file..!");
 
       uploadButton.setBounds(240, 50, 240, 40);
       uploadButton.addActionListener(new ActionListener() {
@@ -113,25 +150,23 @@ public class MainFrame extends JFrame implements setable {
           fileComponent = new JFileChooser();
           int ret = fileComponent.showOpenDialog(null);
           if (ret == JFileChooser.APPROVE_OPTION) {
-            model.addElement(fileComponent.getSelectedFile().toString());
+            File f = new File(fileComponent.getSelectedFile().toString());
+            Optional<String> ext = getExtensionByStringHandling(f.getName());
+            ext.ifPresent(s -> extention = s);
+
+            new FileUploadFrame(
+                new FileDTO(connected_user_id, extention, f.length()), c, f);
+
+            try {
+              getcurrentfilelist(model);
+            } catch (ClassNotFoundException e1) {
+              e1.printStackTrace();
+            } catch (IOException e1) {
+              e1.printStackTrace();
+            }
           }
         }
       });
-
-      if (Integer.parseInt(fileMetadataArray[0]) == -1) {
-        model.addElement("not exist any file..!");
-      } else {
-        fileDTOlist = new FileDTOList();
-        for (int idx = 1; idx < fileMetadataArray.length; idx = idx + 6) {
-          fileDTOlist.add(new FileDTO(
-              Integer.parseInt(fileMetadataArray[idx]),
-              fileMetadataArray[idx + 1], fileMetadataArray[idx + 2],
-              Integer.parseInt(fileMetadataArray[idx + 3]),
-              fileMetadataArray[idx + 4], fileMetadataArray[idx + 5]));
-          model.addElement(fileMetadataArray[idx + 1]);
-        }
-      }
-      /*responseNumber (int file_id) name extention (int size) date comment*/
 
       fileList.setBounds(20, 30, 200, 400);
       fileList.setBackground(jlistBackgroundColor);
@@ -146,5 +181,111 @@ public class MainFrame extends JFrame implements setable {
     }
   }
 
-  class DetailedInformationLabel extends JLabel {}
+  class FileUploadFrame extends JDialog implements ActionListener {
+
+    private ClientSocketIOObject c;
+    private File f;
+    private FileDTO fdto;
+
+    public FileUploadFrame(FileDTO fdto, final ClientSocketIOObject c,
+                           final File f) {
+
+      this.c = c;
+      this.f = f;
+      this.fdto = fdto;
+      this.setTitle("File Upload Window");
+      this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+      this.add(new MyCenterPanel(), BorderLayout.CENTER);
+      this.setLocationRelativeTo(getOwner());
+      this.setSize(300, 250);
+      this.setVisible(true);
+    }
+
+    class MyCenterPanel extends JPanel {
+      private JTextField filenametf;
+      private JButton submitbtn;
+      private JTextArea commentta;
+
+      MyCenterPanel() {
+        filenametf = new JTextField(20);
+        filenametf.setDocument(new JTextFieldLimit(15));
+        submitbtn = new JButton("submit");
+
+        submitbtn.addActionListener(new ActionListener() {
+          @Override
+          public void actionPerformed(ActionEvent e) {
+            /* 이름과 코멘트가 비어있지는 않은지 체크해주어야 되지 않을까....!
+             */
+            c.sender(new SendReceiveSerializationObject(
+                SendReceiveSerializationObject._FILEUPLOAD_REQUEST,
+                new FileDTO(
+                    filenametf.getText(), fdto.getUser_id(),
+                    fdto.getFile_extention(), fdto.getFile_size(),
+                    commentta.getText()))); /* 서버야 업로드 할건데 비트스트림
+                                               받을 준비가 되었니?? */
+            try {
+              if (((SendReceiveSerializationObject)c.Receiver())
+                      .getTaskIdentificationNumber() ==
+                  SendReceiveSerializationObject
+                      ._REQUEST_SUCCESSFULLY_PROCESSED) {
+                c.binaryStreamSender(f);
+              }
+            } catch (ClassNotFoundException | IOException e1) {
+              e1.printStackTrace();
+            } catch (NoSuchAlgorithmException e1) {
+              e1.printStackTrace();
+            }
+            dispose();
+          }
+        });
+
+        commentta = new JTextArea("", 7, 20);
+        this.add(filenametf);
+        this.add(new JScrollPane(commentta));
+        this.add(submitbtn);
+        this.setVisible(true);
+        commentta.addKeyListener(new KeyListener() {
+          @Override
+          public void keyTyped(KeyEvent e) {
+            int max = 49;
+            int textLen = commentta.getText().length();
+            if (textLen > max + 1) {
+              e.consume();
+              String shortened = commentta.getText().substring(0, max);
+              commentta.setText(shortened);
+            } else if (textLen > max) {
+              e.consume();
+            }
+          }
+          @Override
+          public void keyPressed(KeyEvent e) {}
+
+          @Override
+          public void keyReleased(KeyEvent e) {}
+        });
+      }
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {}
+  }
+
+  class JTextFieldLimit extends PlainDocument {
+
+    private int limit;
+
+    public JTextFieldLimit(int limit) {
+      super();
+      this.limit = limit;
+    }
+
+    public void insertString(int offset, String str, AttributeSet attr)
+        throws BadLocationException {
+      if (str == null)
+        return;
+
+      if (getLength() + str.length() <= limit)
+        super.insertString(offset, str, attr);
+    }
+  }
 }
