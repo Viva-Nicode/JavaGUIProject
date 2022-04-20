@@ -7,8 +7,8 @@ import java.net.Socket;
 
 public class RequestHandler {
 
-  public static SendReceiveSerializationObject
-  requestHandler(final Socket so, final SendReceiveSerializationObject o) {
+  public static String
+  requestHandler(final Socket so, final String jsondata) {
     final int TIN = o.getTaskIdentificationNumber();
     try {
       if (TIN == SendReceiveSerializationObject._USER_SIGNUP_REQUEST)

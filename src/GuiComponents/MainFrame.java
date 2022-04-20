@@ -51,7 +51,7 @@ public class MainFrame extends JFrame implements setable {
   private SendReceiveSerializationObject o;
 
   public MainFrame(final String id, final ClientSocketIOObject c,
-                   final SendReceiveSerializationObject o) {
+                   final String o) {
     this.connected_user_id = id;
     this.c = c;
     this.o = o;
