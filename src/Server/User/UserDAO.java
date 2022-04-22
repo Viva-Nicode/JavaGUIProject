@@ -1,8 +1,8 @@
 package Server.User;
 
-import Client.SendReceiveSerializationObject;
 import Server.Util.DatabaseUtil;
 import Server.Util.EncryptUtil;
+import Server.Util.TaskNumbers;
 import java.io.UnsupportedEncodingException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -40,26 +40,54 @@ public class UserDAO {
       return false;
   }
 
-  public static SendReceiveSerializationObject userSignup(final UserDTO user)
+  private static boolean isOverlapUserem(final String user_em)
+      throws Exception {
+    ResultSet rs = null;
+    Connection connection = DatabaseUtil.getConnection();
+
+    String checked_UserID_Overlap_Query =
+        "SELECT * FROM user_info WHERE user_email = ?";
+
+    PreparedStatement preforcheckedoverlap =
+        connection.prepareStatement(checked_UserID_Overlap_Query);
+
+    preforcheckedoverlap.setString(1, user_em);
+
+    rs = preforcheckedoverlap.executeQuery();
+
+    if (rs.next())
+      return true;
+    return false;
+  }
+
+  public static String userSignup(final UserDTO user)
       throws SQLException, UnsupportedEncodingException, Exception {
 
     EncryptUtil e = new EncryptUtil();
 
-    String insert_User_Info_Query = "INSERT INTO user_info VALUES (?, ?)";
+    String insert_User_Info_Query = "INSERT INTO user_info VALUES (?, ?, ?)";
     String insert_User_key_Query = "INSERT INTO user_key VALUES (?, ?)";
 
     Connection connection = DatabaseUtil.getConnection();
 
-    if (isOverlapUserid(user.getUserID())) {
-      return new SendReceiveSerializationObject( // id is overlap
-          SendReceiveSerializationObject._REQUEST_NOT_PROCESSED_PROPERLY);
+    System.out.println("signup DAO");
+    if (isOverlapUserid(user.getUserID())) { // id is overlap
+      return "{\"responseType\":" +
+          TaskNumbers._REQUEST_NOT_PROCESSED_PROPERLY + "}";
+
+    } else if (isOverlapUserem(user.getuserEM())) {
+      return "{\"responseType\":" +
+          TaskNumbers._REQUEST_NOT_PROCESSED_PROPERLY + "}";
     } else {
+      System.out.println("id is not overlap!!");
+
       PreparedStatement pre =
           connection.prepareStatement(insert_User_Info_Query);
 
       pre.setString(1, user.getUserID());
       pre.setString(
           2, new String(e.encryptsion(user.getplainPasswordText()), "UTF-8"));
+      pre.setString(3, user.getuserEM());
 
       if (pre.executeUpdate() == 1) {
         pre = connection.prepareStatement(insert_User_key_Query);
@@ -69,15 +97,15 @@ public class UserDAO {
       }
       // 쿼리가 정상 처리 되었다면(정상 회원가입되었다면) 1 반환
       if (pre.executeUpdate() == 1) {
-        return new SendReceiveSerializationObject(
-            SendReceiveSerializationObject._REQUEST_SUCCESSFULLY_PROCESSED);
+        return "{\"responseType\":" +
+            TaskNumbers._REQUEST_SUCCESSFULLY_PROCESSED + "}";
       }
     }
-    return new SendReceiveSerializationObject(
-        SendReceiveSerializationObject._REQUEST_NOT_PROCESSED_PROPERLY);
+    return "{\"responseType\":" + TaskNumbers._REQUEST_NOT_PROCESSED_PROPERLY +
+        "}";
   }
 
-  public static SendReceiveSerializationObject userLogin(final UserDTO user)
+  public static String userLogin(final UserDTO user)
       throws SQLException, UnsupportedEncodingException, Exception {
 
     if (isOverlapUserid(user.getUserID())) {
@@ -100,17 +128,17 @@ public class UserDAO {
       if (new String(e.encryptsion(user.getplainPasswordText()), "UTF-8")
               .equals(ciphertext)) {
         /* 아디 비번 정상 존재하다면 0 반환 */
-        return new SendReceiveSerializationObject(
-            SendReceiveSerializationObject._REQUEST_SUCCESSFULLY_PROCESSED);
+		return "{\"responseType\":" + TaskNumbers._REQUEST_SUCCESSFULLY_PROCESSED +
+        "}";
       } else {
         /* 아이디 있지만 비번 없으면 -1 반환 */
-        return new SendReceiveSerializationObject(
-            SendReceiveSerializationObject._REQUEST_NOT_PROCESSED_PROPERLY);
+        return "{\"responseType\":" + TaskNumbers._REQUEST_NOT_PROCESSED_PROPERLY +
+        "}";
       }
     } else {
-      /* 아이디 조차 없으면 -2 반환 */
-      return new SendReceiveSerializationObject(
-          SendReceiveSerializationObject._REQUEST_NOT_PROCESSED_PROPERLY);
+
+      return "{\"responseType\":" + TaskNumbers._REQUEST_NOT_PROCESSED_PROPERLY +
+        "}";
     }
   }
 }

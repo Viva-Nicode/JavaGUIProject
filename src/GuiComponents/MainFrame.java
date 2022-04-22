@@ -1,10 +1,13 @@
 package GuiComponents;
 
 import Client.ClientSocketIOObject;
-import Client.SendReceiveSerializationObject;
 import Server.File.FileDTO;
-import Server.File.FileDTOVector;
-import Server.User.UserDTO;
+import Server.Util.TaskNumbers;
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Graphics;
@@ -14,11 +17,9 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Optional;
-import javax.lang.model.util.ElementScanner14;
 import javax.swing.DefaultListModel;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -48,13 +49,11 @@ public class MainFrame extends JFrame implements setable {
   private final String connected_user_id;
   private ClientSocketIOObject c;
   private JList<String> fileList;
-  private SendReceiveSerializationObject o;
 
-  public MainFrame(final String id, final ClientSocketIOObject c,
-                   final String o) {
+  public MainFrame(final String id, final ClientSocketIOObject c)
+      throws ClassNotFoundException, IOException {
     this.connected_user_id = id;
     this.c = c;
-    this.o = o;
     this.setTitle("kakao Cloud");
     this.setLayout(null);
     this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -71,25 +70,28 @@ public class MainFrame extends JFrame implements setable {
     private JMenu menu;
     private JMenuItem logout;
     private JButton uploadButton;
-    private FileDTOVector fileDTOvector;
     private String extention = "";
     JFileChooser fileComponent;
 
     /* refersh fileDTOvector */
-    public void getcurrentfilelist(DefaultListModel<String> model)
+    public void updateFilelist(DefaultListModel<String> model)
         throws ClassNotFoundException, IOException {
-      c.sender(new SendReceiveSerializationObject(
-          SendReceiveSerializationObject._FILELIST_REQUEST,
-          new UserDTO(connected_user_id)));
-      SendReceiveSerializationObject o =
-          (SendReceiveSerializationObject)c.Receiver();
-      if (o.getTaskIdentificationNumber() ==
-          SendReceiveSerializationObject._REQUEST_SUCCESSFULLY_PROCESSED) {
-        fileDTOvector = o.getFileList();
-        for (FileDTO f : fileDTOvector)
-          model.addElement(f.getFile_name());
-      } else
+      c.sender("{\"requestType\":" + TaskNumbers._FILELIST_REQUEST +
+               ",\"user_id\":\"" + connected_user_id + "\""
+               + "}");
+      JsonObject jo = JsonParser.parseString(c.Receiver()).getAsJsonObject();
+      int responseNum = jo.get("responseType").getAsInt();
+
+      if (responseNum == TaskNumbers._REQUEST_SUCCESSFULLY_PROCESSED) {
+        JsonArray filelist = jo.get("filelist").getAsJsonArray();
+        for (JsonElement filedto : filelist) {
+          JsonObject j = filedto.getAsJsonObject();
+          model.addElement(j.get("file_name").getAsString());
+        }
+      } else {
+        model.clear();
         model.addElement("not exist any file..!");
+      }
     }
     Image background =
         new ImageIcon(MainPanel.class.getResource("./imgs/bgimg.jpg"))
@@ -106,11 +108,10 @@ public class MainFrame extends JFrame implements setable {
           .map(f -> f.substring(filename.lastIndexOf(".") + 1));
     }
 
-    public MainPanel() {
+    public MainPanel() throws ClassNotFoundException, IOException {
 
       this.setSize(FRAMEWIDTH, FRAMEHEIGHT);
       this.setLayout(null);
-      this.fileDTOvector = o.getFileList();
       menubar = new JMenuBar();
       menu = new JMenu("MENU");
       menubar.add(menu);
@@ -118,8 +119,7 @@ public class MainFrame extends JFrame implements setable {
       logout.addActionListener(new ActionListener() {
         @Override
         public void actionPerformed(ActionEvent e) {
-          c.sender(new SendReceiveSerializationObject(
-              SendReceiveSerializationObject._DESCONNECT_REQUEST));
+          c.sender("{\"requestType\":" + TaskNumbers._DESCONNECT_REQUEST + "}");
           c.desconnect();
           dispose();
           new LoginFrame();
@@ -136,12 +136,7 @@ public class MainFrame extends JFrame implements setable {
       DefaultListModel<String> model =
           (DefaultListModel<String>)fileList.getModel();
 
-      if (o.getTaskIdentificationNumber() ==
-          SendReceiveSerializationObject._REQUEST_SUCCESSFULLY_PROCESSED) {
-        for (FileDTO f : fileDTOvector)
-          model.addElement(f.getFile_name());
-      } else
-        model.addElement("not exist any file..!");
+      updateFilelist(model);
 
       uploadButton.setBounds(240, 50, 240, 40);
       uploadButton.addActionListener(new ActionListener() {
@@ -158,7 +153,7 @@ public class MainFrame extends JFrame implements setable {
                 new FileDTO(connected_user_id, extention, f.length()), c, f);
 
             try {
-              getcurrentfilelist(model);
+              updateFilelist(model);
             } catch (ClassNotFoundException e1) {
               e1.printStackTrace();
             } catch (IOException e1) {
@@ -216,20 +211,23 @@ public class MainFrame extends JFrame implements setable {
           public void actionPerformed(ActionEvent e) {
             /* 이름과 코멘트가 비어있지는 않은지 체크해주어야 되지 않을까....!
              */
-            c.sender(new SendReceiveSerializationObject(
-                SendReceiveSerializationObject._FILEUPLOAD_REQUEST,
-                new FileDTO(
-                    filenametf.getText(), fdto.getUser_id(),
-                    fdto.getFile_extention(), fdto.getFile_size(),
-                    commentta.getText()))); /* 서버야 업로드 할건데 비트스트림
-                                               받을 준비가 되었니?? */
+            JsonObject jo = new JsonObject();
+            jo.addProperty("requestType", TaskNumbers._FILEUPLOAD_REQUEST);
+            jo.addProperty("file_name", filenametf.getText());
+            jo.addProperty("user_id", fdto.getUser_id());
+            jo.addProperty("file_extention", fdto.getFile_extention());
+            jo.addProperty("file_bytesize", fdto.getFile_size());
+            jo.addProperty("file_comment", commentta.getText());
+            c.sender(new Gson().toJson(jo));
+
             try {
-              if (((SendReceiveSerializationObject)c.Receiver())
-                      .getTaskIdentificationNumber() ==
-                  SendReceiveSerializationObject
-                      ._REQUEST_SUCCESSFULLY_PROCESSED) {
+
+              JsonObject joo =
+                  JsonParser.parseString(c.Receiver()).getAsJsonObject();
+              int r = joo.get("responseType").getAsInt();
+              if (r == TaskNumbers._REQUEST_SUCCESSFULLY_PROCESSED)
                 c.binaryStreamSender(f);
-              }
+
             } catch (ClassNotFoundException | IOException e1) {
               e1.printStackTrace();
             } catch (NoSuchAlgorithmException e1) {
