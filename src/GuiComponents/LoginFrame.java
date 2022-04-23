@@ -64,7 +64,7 @@ class HintTextField extends JTextField {
 
 interface LoginFrameSetable {
   public final int LOGINFRAMEWIDTH = 390;
-  public final int LOGINFRAMEHEIGHT = 640;
+  public final int LOGINFRAMEHEIGHT = 590;
   public final Color bgcolor = new Color(252, 236, 92);
   public final String PRIVATEIP = "192.168.219.112";
   public final String PUBLICIP = "116.39.246.101";
@@ -109,8 +109,8 @@ public class LoginFrame extends JFrame implements LoginFrameSetable {
       kakaoMark.setBounds(80, 30, 230, 216);
       IDtextField.setBounds(75, 220, 240, 45);
       PWtextField.setBounds(75, 258, 240, 45);
-      SignUpLabel.setBounds(135, 560, 45, 20);
-      FindPWLabel.setBounds(205, 560, 45, 20);
+      SignUpLabel.setBounds(135, 510, 45, 20);
+      FindPWLabel.setBounds(205, 510, 45, 20);
 
       loginbtn.addActionListener(new ActionListener() {
         @Override

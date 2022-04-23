@@ -8,6 +8,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonSyntaxException;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Graphics;
@@ -16,9 +17,13 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.io.File;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import javax.swing.DefaultListModel;
 import javax.swing.ImageIcon;
@@ -26,10 +31,12 @@ import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
@@ -41,7 +48,7 @@ import javax.swing.text.PlainDocument;
 interface setable {
   public final int FRAMEWIDTH = 650;
   public final int FRAMEHEIGHT = 600;
-  public final Color jlistBackgroundColor = new Color(0x8977ad);
+  public final Color jlistBackgroundColor = new Color(000);
 }
 
 public class MainFrame extends JFrame implements setable {
@@ -49,6 +56,7 @@ public class MainFrame extends JFrame implements setable {
   private final String connected_user_id;
   private ClientSocketIOObject c;
   private JList<String> fileList;
+  private List<FileDTO> l;
 
   public MainFrame(final String id, final ClientSocketIOObject c)
       throws ClassNotFoundException, IOException {
@@ -64,16 +72,41 @@ public class MainFrame extends JFrame implements setable {
     setVisible(true);
   }
 
+  private boolean isFilenameOverlap(final String filename) {
+    for (FileDTO t : l) {
+      if (t.getFile_name().equals(filename))
+        return true;
+    }
+    return false;
+  }
+
   private class MainPanel extends JPanel {
 
     private JMenuBar menubar;
     private JMenu menu;
     private JMenuItem logout;
     private JButton uploadButton;
+    private JButton refreshfilelistButton;
     private String extention = "";
+    private DefaultListModel<String> model;
+    private fileInfoPrintPanel fip;
     JFileChooser fileComponent;
 
-    /* refersh fileDTOvector */
+    private String getSelectItemExt(final String filename) {
+      String ext = "";
+      for (FileDTO t : l) {
+        if (t.getFile_name().equals(filename)) {
+          ext = t.getFile_extention();
+          if (ext.equalsIgnoreCase("jpg") || ext.equalsIgnoreCase("jpeg") ||
+              ext.equalsIgnoreCase("png") || ext.equalsIgnoreCase("img")) {
+            return "img";
+          }
+          return ext;
+        }
+      }
+      return "file";
+    }
+    /* update model list, fileDTOlist */
     public void updateFilelist(DefaultListModel<String> model)
         throws ClassNotFoundException, IOException {
       c.sender("{\"requestType\":" + TaskNumbers._FILELIST_REQUEST +
@@ -84,8 +117,14 @@ public class MainFrame extends JFrame implements setable {
 
       if (responseNum == TaskNumbers._REQUEST_SUCCESSFULLY_PROCESSED) {
         JsonArray filelist = jo.get("filelist").getAsJsonArray();
+        model.clear();
         for (JsonElement filedto : filelist) {
           JsonObject j = filedto.getAsJsonObject();
+          l.add(new FileDTO(j.get("file_name").getAsString(),
+                            j.get("file_extention").getAsString(),
+                            j.get("file_bytesize").getAsLong(),
+                            j.get("upload_date").getAsString(),
+                            j.get("file_comment").getAsString()));
           model.addElement(j.get("file_name").getAsString());
         }
       } else {
@@ -93,6 +132,7 @@ public class MainFrame extends JFrame implements setable {
         model.addElement("not exist any file..!");
       }
     }
+
     Image background =
         new ImageIcon(MainPanel.class.getResource("./imgs/bgimg.jpg"))
             .getImage();
@@ -112,9 +152,13 @@ public class MainFrame extends JFrame implements setable {
 
       this.setSize(FRAMEWIDTH, FRAMEHEIGHT);
       this.setLayout(null);
+      l = new ArrayList<>();
+      fip = new fileInfoPrintPanel();
+      fip.setLocation(240, 30);
       menubar = new JMenuBar();
       menu = new JMenu("MENU");
       menubar.add(menu);
+
       logout = new JMenuItem("logout");
       logout.addActionListener(new ActionListener() {
         @Override
@@ -130,15 +174,30 @@ public class MainFrame extends JFrame implements setable {
       setJMenuBar(menubar);
 
       uploadButton = new JButton("upload");
+      refreshfilelistButton = new JButton("refresh");
 
       fileList = new JList<String>(new DefaultListModel());
 
-      DefaultListModel<String> model =
-          (DefaultListModel<String>)fileList.getModel();
+      model = (DefaultListModel<String>)fileList.getModel();
 
+      fileList.addMouseListener(new MouseListener() {
+        @Override
+        public void mousePressed(MouseEvent e) {
+          String ext = getSelectItemExt(fileList.getSelectedValue());
+          fip.setImageIcon(ext);
+        }
+        @Override
+        public void mouseClicked(MouseEvent e) {}
+        @Override
+        public void mouseReleased(MouseEvent e) {}
+        @Override
+        public void mouseEntered(MouseEvent e) {}
+        @Override
+        public void mouseExited(MouseEvent e) {}
+      });
       updateFilelist(model);
 
-      uploadButton.setBounds(240, 50, 240, 40);
+      uploadButton.setBounds(510, 30, 120, 40);
       uploadButton.addActionListener(new ActionListener() {
         @Override
         public void actionPerformed(ActionEvent e) {
@@ -148,17 +207,46 @@ public class MainFrame extends JFrame implements setable {
             File f = new File(fileComponent.getSelectedFile().toString());
             Optional<String> ext = getExtensionByStringHandling(f.getName());
             ext.ifPresent(s -> extention = s);
-
             new FileUploadFrame(
-                new FileDTO(connected_user_id, extention, f.length()), c, f);
+                new FileDTO(connected_user_id, extention, f.length()), c, f,
+                model);
+          }
+        }
+      });
 
-            try {
-              updateFilelist(model);
-            } catch (ClassNotFoundException e1) {
-              e1.printStackTrace();
-            } catch (IOException e1) {
-              e1.printStackTrace();
+      refreshfilelistButton.setBounds(510, 70, 120, 40);
+      refreshfilelistButton.addActionListener(new ActionListener() {
+        JsonObject jo;
+        @Override
+        public void actionPerformed(ActionEvent e) {
+          c.sender("{\"requestType\":" + TaskNumbers._FILELIST_REQUEST +
+                   ",\"user_id\":\"" + connected_user_id + "\""
+                   + "}");
+          try {
+            jo = JsonParser.parseString(c.Receiver()).getAsJsonObject();
+          } catch (JsonSyntaxException | ClassNotFoundException |
+                   IOException e1) {
+            e1.printStackTrace();
+          }
+          int responseNum = jo.get("responseType").getAsInt();
+
+          if (responseNum == TaskNumbers._REQUEST_SUCCESSFULLY_PROCESSED) {
+            JsonArray filelist = jo.get("filelist").getAsJsonArray();
+            model.clear();
+            l.clear();
+            for (JsonElement filedto : filelist) {
+              JsonObject j = filedto.getAsJsonObject();
+              l.add(new FileDTO(j.get("file_name").getAsString(),
+                                j.get("file_extention").getAsString(),
+                                j.get("file_bytesize").getAsLong(),
+                                j.get("upload_date").getAsString(),
+                                j.get("file_comment").getAsString()));
+              model.addElement(j.get("file_name").getAsString());
             }
+          } else {
+            model.clear();
+            l.clear();
+            model.addElement("not exist any file..!");
           }
         }
       });
@@ -170,9 +258,35 @@ public class MainFrame extends JFrame implements setable {
 
       add(fileList);
       add(uploadButton);
+      add(refreshfilelistButton);
+      add(fip);
 
       requestFocus();
       setFocusable(true);
+    }
+
+    class fileInfoPrintPanel extends JPanel {
+      private final String iconsPath =
+          "/Users/nicode./MainSpace/vscodeworkspace/JavaCloudProject/src/GuiComponents/imgs/ext_icons/";
+      private JLabel extIconLabel;
+      public fileInfoPrintPanel() {
+        extIconLabel = new JLabel();
+        extIconLabel.setBounds(10, 10, 120, 120);
+        this.setSize(250, 300);
+        this.setLayout(null);
+        this.setBackground(Color.WHITE);
+        this.add(extIconLabel);
+      }
+
+      public void setImageIcon(final String ext) {
+        File f = new File(iconsPath + ext + ".png");
+        if (f.exists())
+          extIconLabel.setIcon(new ImageIcon(iconsPath + ext + ".png"));
+        else
+          extIconLabel.setIcon(new ImageIcon(iconsPath + "file.png"));
+        extIconLabel.repaint();
+        this.repaint();
+      }
     }
   }
 
@@ -181,27 +295,28 @@ public class MainFrame extends JFrame implements setable {
     private ClientSocketIOObject c;
     private File f;
     private FileDTO fdto;
+    private DefaultListModel<String> model;
 
     public FileUploadFrame(FileDTO fdto, final ClientSocketIOObject c,
-                           final File f) {
-
+                           final File f, DefaultListModel<String> model) {
+      this.model = model;
       this.c = c;
       this.f = f;
       this.fdto = fdto;
       this.setTitle("File Upload Window");
       this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-      this.add(new MyCenterPanel(), BorderLayout.CENTER);
+      this.add(new nameAndCommentInputPanel(), BorderLayout.CENTER);
       this.setLocationRelativeTo(getOwner());
       this.setSize(300, 250);
       this.setVisible(true);
     }
 
-    class MyCenterPanel extends JPanel {
+    class nameAndCommentInputPanel extends JPanel {
       private JTextField filenametf;
       private JButton submitbtn;
       private JTextArea commentta;
 
-      MyCenterPanel() {
+      nameAndCommentInputPanel() {
         filenametf = new JTextField(20);
         filenametf.setDocument(new JTextFieldLimit(15));
         submitbtn = new JButton("submit");
@@ -209,31 +324,54 @@ public class MainFrame extends JFrame implements setable {
         submitbtn.addActionListener(new ActionListener() {
           @Override
           public void actionPerformed(ActionEvent e) {
-            /* 이름과 코멘트가 비어있지는 않은지 체크해주어야 되지 않을까....!
-             */
-            JsonObject jo = new JsonObject();
-            jo.addProperty("requestType", TaskNumbers._FILEUPLOAD_REQUEST);
-            jo.addProperty("file_name", filenametf.getText());
-            jo.addProperty("user_id", fdto.getUser_id());
-            jo.addProperty("file_extention", fdto.getFile_extention());
-            jo.addProperty("file_bytesize", fdto.getFile_size());
-            jo.addProperty("file_comment", commentta.getText());
-            c.sender(new Gson().toJson(jo));
+            if (filenametf.getText().equals("") ||
+                commentta.getText().equals("") ||
+                isFilenameOverlap(filenametf.getText())) {
+              JOptionPane.showMessageDialog(
+                  null, "please insert name and comment", "omg", 2);
+            } else {
+              JsonObject jo = new JsonObject();
+              jo.addProperty("requestType", TaskNumbers._FILEUPLOAD_REQUEST);
+              jo.addProperty("file_name", filenametf.getText());
+              jo.addProperty("user_id", fdto.getUser_id());
+              jo.addProperty("file_extention", fdto.getFile_extention());
+              jo.addProperty("file_bytesize", fdto.getFile_size());
+              jo.addProperty("file_comment", commentta.getText());
+              c.sender(new Gson().toJson(jo));
 
-            try {
-
-              JsonObject joo =
-                  JsonParser.parseString(c.Receiver()).getAsJsonObject();
-              int r = joo.get("responseType").getAsInt();
-              if (r == TaskNumbers._REQUEST_SUCCESSFULLY_PROCESSED)
-                c.binaryStreamSender(f);
-
-            } catch (ClassNotFoundException | IOException e1) {
-              e1.printStackTrace();
-            } catch (NoSuchAlgorithmException e1) {
-              e1.printStackTrace();
+              try {
+                JsonObject joo =
+                    JsonParser.parseString(c.Receiver()).getAsJsonObject();
+                int r = joo.get("responseType").getAsInt();
+                if (r == TaskNumbers._REQUEST_SUCCESSFULLY_PROCESSED)
+                  c.binaryStreamSender(f);
+                joo = JsonParser.parseString(c.Receiver()).getAsJsonObject();
+                r = joo.get("responseType").getAsInt();
+                if (r == TaskNumbers._REQUEST_SUCCESSFULLY_PROCESSED) {
+                  JsonArray filelist = joo.get("filelist").getAsJsonArray();
+                  model.clear();
+                  l.clear();
+                  for (JsonElement filedto : filelist) {
+                    JsonObject j = filedto.getAsJsonObject();
+                    l.add(new FileDTO(j.get("file_name").getAsString(),
+                                      j.get("file_extention").getAsString(),
+                                      j.get("file_bytesize").getAsLong(),
+                                      j.get("upload_date").getAsString(),
+                                      j.get("file_comment").getAsString()));
+                    model.addElement(j.get("file_name").getAsString());
+                  }
+                } else {
+                  model.clear();
+                  l.clear();
+                  model.addElement("not exist any file..!");
+                }
+              } catch (ClassNotFoundException | IOException e1) {
+                e1.printStackTrace();
+              } catch (NoSuchAlgorithmException e1) {
+                e1.printStackTrace();
+              }
+              dispose();
             }
-            dispose();
           }
         });
 

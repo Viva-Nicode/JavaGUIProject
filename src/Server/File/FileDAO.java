@@ -37,9 +37,10 @@ public class FileDAO {
     while (true) {
       if (rs.next()) {
         FileDTOJsonArray +=
-            new FileDTO(rs.getString(1), rs.getString(2), rs.getString(3),
-                        rs.getLong(4), rs.getString(5)) +
+            new FileDTO(rs.getString(1), rs.getString(2), rs.getLong(3),
+                        rs.getString(4), rs.getString(5)) +
             ", ";
+
       } else {
         break;
       }
@@ -75,16 +76,16 @@ public class FileDAO {
 
   public static String insertuploadedfile(final Socket s,
                                           final String filemetadatas)
-      throws IOException, InterruptedException {
+      throws IOException, InterruptedException, SQLException {
 
     Thread t = new Thread(new fileIOObject(s, filemetadatas));
     System.out.println("start file Input thread");
     t.start();
     t.join();
     System.out.println("finish file Input thread");
+    JsonObject jo = JsonParser.parseString(filemetadatas).getAsJsonObject();
 
-    return "{\"responseType\":" + TaskNumbers._REQUEST_SUCCESSFULLY_PROCESSED +
-        "}";
+    return getFilelist(jo.get("user_id").getAsString());
   }
 }
 
@@ -118,22 +119,22 @@ class fileIOObject implements Runnable {
                            fd.getFile_name() + "." + fd.getFile_extention());
       file.createNewFile();
       bos = new BufferedOutputStream(new FileOutputStream(file), 4096);
+      byte[] allbytedata = new byte[(int)readupnum * 4096];
+      System.out.println("readupnum : " + readupnum);
+
       bufferedWriter.write(
           "{\"responseType\":" + TaskNumbers._REQUEST_SUCCESSFULLY_PROCESSED +
           "}\r\n");
       bufferedWriter.flush();
-      System.out.println("readupnum : " + readupnum);
 
-      byte[] allbytedata = new byte[(int)readupnum * 4096];
       System.out.println("allbytedata len : " + allbytedata.length);
 
       for (int idx = 0; idx < readupnum; idx++) {
         bis.read(buffer);
-        System.out.println("readup count ..." + idx);
         bos.write(buffer);
       }
 
-      /* String hashcode = SendReceiveSerializationObject.sha256(alldata); */
+      /* String hashcode = TaskNumbers.sha256(alldata); */
 
       String insert_blob_data_query =
           "INSERT INTO uploadedfile VALUES (?, ?, ?)";

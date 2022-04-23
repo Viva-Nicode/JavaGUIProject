@@ -127,18 +127,16 @@ public class UserDAO {
 
       if (new String(e.encryptsion(user.getplainPasswordText()), "UTF-8")
               .equals(ciphertext)) {
-        /* 아디 비번 정상 존재하다면 0 반환 */
-		return "{\"responseType\":" + TaskNumbers._REQUEST_SUCCESSFULLY_PROCESSED +
-        "}";
+        return "{\"responseType\":" +
+            TaskNumbers._REQUEST_SUCCESSFULLY_PROCESSED + "}";
       } else {
-        /* 아이디 있지만 비번 없으면 -1 반환 */
-        return "{\"responseType\":" + TaskNumbers._REQUEST_NOT_PROCESSED_PROPERLY +
-        "}";
+        return "{\"responseType\":" +
+            TaskNumbers._REQUEST_NOT_PROCESSED_PROPERLY + "}";
       }
     } else {
 
-      return "{\"responseType\":" + TaskNumbers._REQUEST_NOT_PROCESSED_PROPERLY +
-        "}";
+      return "{\"responseType\":" +
+          TaskNumbers._REQUEST_NOT_PROCESSED_PROPERLY + "}";
     }
   }
 }

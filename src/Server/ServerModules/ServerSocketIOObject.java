@@ -29,14 +29,13 @@ public class ServerSocketIOObject implements Runnable {
     while (true) {
       try {
         String requestLine = "";
-        while ((requestLine = bufferedReader.readLine()) != null) {
-          System.out.println("in serversocket : " + requestLine);
-          bufferedWriter.write(
-              RequestHandler.requestHandler(socket, requestLine) + "\r\n");
-          bufferedWriter.flush();
-        }
-
-      } catch (IOException e) {
+        System.out.println("Request Waiting ...");
+        requestLine = bufferedReader.readLine();
+        System.out.println("Request Received : " + requestLine);
+        bufferedWriter.write(
+            RequestHandler.requestHandler(socket, requestLine) + "\r\n");
+        bufferedWriter.flush();
+      } catch (IOException | NullPointerException e) {
         System.out.println("Maybe msg is null because upload was performed.");
         break;
       }
