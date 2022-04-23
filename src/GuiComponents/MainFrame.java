@@ -92,19 +92,13 @@ public class MainFrame extends JFrame implements setable {
     private fileInfoPrintPanel fip;
     JFileChooser fileComponent;
 
-    private String getSelectItemExt(final String filename) {
-      String ext = "";
+    private FileDTO getSelectItemFileDTO(final String filename) {
+
       for (FileDTO t : l) {
-        if (t.getFile_name().equals(filename)) {
-          ext = t.getFile_extention();
-          if (ext.equalsIgnoreCase("jpg") || ext.equalsIgnoreCase("jpeg") ||
-              ext.equalsIgnoreCase("png") || ext.equalsIgnoreCase("img")) {
-            return "img";
-          }
-          return ext;
-        }
+        if (t.getFile_name().equals(filename))
+          return t;
       }
-      return "file";
+      return null;
     }
     /* update model list, fileDTOlist */
     public void updateFilelist(DefaultListModel<String> model)
@@ -120,11 +114,11 @@ public class MainFrame extends JFrame implements setable {
         model.clear();
         for (JsonElement filedto : filelist) {
           JsonObject j = filedto.getAsJsonObject();
+          String com = j.get("file_comment").getAsString().replace("\f", "\n");
           l.add(new FileDTO(j.get("file_name").getAsString(),
                             j.get("file_extention").getAsString(),
                             j.get("file_bytesize").getAsLong(),
-                            j.get("upload_date").getAsString(),
-                            j.get("file_comment").getAsString()));
+                            j.get("upload_date").getAsString(), com));
           model.addElement(j.get("file_name").getAsString());
         }
       } else {
@@ -183,7 +177,14 @@ public class MainFrame extends JFrame implements setable {
       fileList.addMouseListener(new MouseListener() {
         @Override
         public void mousePressed(MouseEvent e) {
-          String ext = getSelectItemExt(fileList.getSelectedValue());
+          FileDTO t = getSelectItemFileDTO(fileList.getSelectedValue());
+          fip.setfileInfo(t);
+          String ext = t.getFile_extention();
+          if (ext.equalsIgnoreCase("jpg") || ext.equalsIgnoreCase("jpeg") ||
+              ext.equalsIgnoreCase("png")) {
+            fip.setImageIcon("img");
+            return;
+          }
           fip.setImageIcon(ext);
         }
         @Override
@@ -236,11 +237,12 @@ public class MainFrame extends JFrame implements setable {
             l.clear();
             for (JsonElement filedto : filelist) {
               JsonObject j = filedto.getAsJsonObject();
+              String csom =
+                  j.get("file_comment").getAsString().replace("\f", "\n");
               l.add(new FileDTO(j.get("file_name").getAsString(),
                                 j.get("file_extention").getAsString(),
                                 j.get("file_bytesize").getAsLong(),
-                                j.get("upload_date").getAsString(),
-                                j.get("file_comment").getAsString()));
+                                j.get("upload_date").getAsString(), csom));
               model.addElement(j.get("file_name").getAsString());
             }
           } else {
@@ -269,13 +271,33 @@ public class MainFrame extends JFrame implements setable {
       private final String iconsPath =
           "/Users/nicode./MainSpace/vscodeworkspace/JavaCloudProject/src/GuiComponents/imgs/ext_icons/";
       private JLabel extIconLabel;
+      private JLabel filenameLabel;
+      private JLabel fileSize;
+      private JLabel fileUploadDate;
+      private JTextArea fileCommentLabel;
       public fileInfoPrintPanel() {
+
         extIconLabel = new JLabel();
+        filenameLabel = new JLabel();
+        fileUploadDate = new JLabel();
+        fileSize = new JLabel();
+        fileCommentLabel = new JTextArea();
+        /* fileCommentLabel.setEnabled(false); */
+
         extIconLabel.setBounds(10, 10, 120, 120);
-        this.setSize(250, 300);
+        filenameLabel.setBounds(10, 140, 220, 20);
+        fileUploadDate.setBounds(10, 160, 220, 20);
+        fileSize.setBounds(10, 180, 220, 20);
+        fileCommentLabel.setBounds(10, 200, 120, 100);
+
+        this.setSize(250, 400);
         this.setLayout(null);
         this.setBackground(Color.WHITE);
         this.add(extIconLabel);
+        this.add(filenameLabel);
+        this.add(fileUploadDate);
+        this.add(fileSize);
+        this.add(fileCommentLabel);
       }
 
       public void setImageIcon(final String ext) {
@@ -286,6 +308,12 @@ public class MainFrame extends JFrame implements setable {
           extIconLabel.setIcon(new ImageIcon(iconsPath + "file.png"));
         extIconLabel.repaint();
         this.repaint();
+      }
+      public void setfileInfo(final FileDTO f) {
+        filenameLabel.setText("file name : " + f.getFile_name());
+        fileUploadDate.setText("upload date : " + f.getUpload_date());
+        fileSize.setText(new String(f.getFile_size() + " byte"));
+        fileCommentLabel.setText(f.getFile_comment());
       }
     }
   }
@@ -318,7 +346,7 @@ public class MainFrame extends JFrame implements setable {
 
       nameAndCommentInputPanel() {
         filenametf = new JTextField(20);
-        filenametf.setDocument(new JTextFieldLimit(15));
+        filenametf.setDocument(new JTextFieldLimit(30));
         submitbtn = new JButton("submit");
 
         submitbtn.addActionListener(new ActionListener() {
@@ -331,12 +359,13 @@ public class MainFrame extends JFrame implements setable {
                   null, "please insert name and comment", "omg", 2);
             } else {
               JsonObject jo = new JsonObject();
+              String com = commentta.getText().replaceAll("\\R", "\f");
               jo.addProperty("requestType", TaskNumbers._FILEUPLOAD_REQUEST);
               jo.addProperty("file_name", filenametf.getText());
               jo.addProperty("user_id", fdto.getUser_id());
               jo.addProperty("file_extention", fdto.getFile_extention());
               jo.addProperty("file_bytesize", fdto.getFile_size());
-              jo.addProperty("file_comment", commentta.getText());
+              jo.addProperty("file_comment", com);
               c.sender(new Gson().toJson(jo));
 
               try {
@@ -353,11 +382,13 @@ public class MainFrame extends JFrame implements setable {
                   l.clear();
                   for (JsonElement filedto : filelist) {
                     JsonObject j = filedto.getAsJsonObject();
+                    String comm =
+                        j.get("file_comment").getAsString().replace("\f", "\n");
                     l.add(new FileDTO(j.get("file_name").getAsString(),
                                       j.get("file_extention").getAsString(),
                                       j.get("file_bytesize").getAsLong(),
                                       j.get("upload_date").getAsString(),
-                                      j.get("file_comment").getAsString()));
+                                      comm));
                     model.addElement(j.get("file_name").getAsString());
                   }
                 } else {
@@ -383,7 +414,7 @@ public class MainFrame extends JFrame implements setable {
         commentta.addKeyListener(new KeyListener() {
           @Override
           public void keyTyped(KeyEvent e) {
-            int max = 49;
+            int max = 60;
             int textLen = commentta.getText().length();
             if (textLen > max + 1) {
               e.consume();
