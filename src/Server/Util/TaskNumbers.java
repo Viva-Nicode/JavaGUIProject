@@ -16,6 +16,7 @@ interface TaskNumberable {
   public final static int _DESCONNECT_REQUEST = 4;
   public final static int _FILEUPLOAD_REQUEST = 5;
   public final static int _FILEDOWNLOAD_REQUEST = 6;
+  public final static int _FILEDELETE_REQUEST = 7;
 }
 
 public class TaskNumbers implements TaskNumberable {

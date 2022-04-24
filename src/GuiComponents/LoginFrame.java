@@ -93,12 +93,6 @@ public class LoginFrame extends JFrame implements LoginFrameSetable {
 
     public LoginPanel() {
 
-      try {
-        c = new ClientSocketIOObject(LOCALHOST, PORT);
-      } catch (IOException e1) {
-        e1.printStackTrace();
-      }
-
       this.setSize(LOGINFRAMEWIDTH, LOGINFRAMEHEIGHT);
       this.setLayout(null);
       setBackground(bgcolor);
@@ -115,6 +109,11 @@ public class LoginFrame extends JFrame implements LoginFrameSetable {
       loginbtn.addActionListener(new ActionListener() {
         @Override
         public void actionPerformed(ActionEvent e) {
+          try {
+            c = new ClientSocketIOObject(LOCALHOST, PORT);
+          } catch (IOException e1) {
+            e1.printStackTrace();
+          }
           String loginFreamIDTextFieldValue = IDtextField.getText();
           String loginFreamPWTextFieldValue = PWtextField.getText();
           try {
@@ -181,6 +180,6 @@ public class LoginFrame extends JFrame implements LoginFrameSetable {
 1. 파일 삭제
 2. 파일 이름, 코멘트 수정
 3. 파일 이름순, 날짜 순, 크기 순 정렬
-4. 유저마다 다른 서버의 디렉터리를 사용해야 함
+4. 로그인 버튼 눌렀을 떄 소켓 연결되는걸로 바꿔야 함
 
 */

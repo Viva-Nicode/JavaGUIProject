@@ -127,6 +127,35 @@ public class FileDAO {
     return "{\"responseType\":" + TaskNumbers._REQUEST_NOT_PROCESSED_PROPERLY +
         "}";
   }
+
+  public static String deleteFile(final Socket s, final String deleteRequest)
+      throws SQLException {
+
+    JsonObject jo = JsonParser.parseString(deleteRequest).getAsJsonObject();
+
+    String getfilePathquery =
+        "select file_path from uploadedfile where user_id = ? && file_name = ?";
+
+    Connection connection = DatabaseUtil.getConnection();
+    PreparedStatement pre = connection.prepareStatement(getfilePathquery);
+
+    pre.setString(1, jo.get("user_id").getAsString());
+    pre.setString(2, jo.get("file_name").getAsString());
+
+    ResultSet rs = pre.executeQuery();
+    rs.next();
+    File f = new File(rs.getString(1));
+    f.delete();
+
+    String fileDeletQuery = "delete from uploadedfile where file_path = ?";
+
+    pre = connection.prepareStatement(fileDeletQuery);
+    pre.setString(1, f.getPath());
+    pre.executeUpdate();
+
+    return "{\"responseType\":" + TaskNumbers._REQUEST_SUCCESSFULLY_PROCESSED +
+        "}";
+  }
 }
 
 class fileIOObject implements Runnable {

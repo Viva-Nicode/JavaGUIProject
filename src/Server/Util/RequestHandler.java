@@ -31,7 +31,9 @@ public class RequestHandler {
       } else if (RquestTypeNum == TaskNumberable._FILEUPLOAD_REQUEST) {
         return FileDAO.insertuploadedfile(so, jsondata);
       } else if (RquestTypeNum == TaskNumberable._FILEDOWNLOAD_REQUEST) {
-		  return FileDAO.downloadRequestProcessor(so, jsondata);
+        return FileDAO.downloadRequestProcessor(so, jsondata);
+      } else if (RquestTypeNum == TaskNumberable._FILEDELETE_REQUEST) {
+        return FileDAO.deleteFile(so, jsondata);
       }
     } catch (Exception e) {
       e.printStackTrace();
