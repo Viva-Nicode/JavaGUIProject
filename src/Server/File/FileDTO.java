@@ -72,9 +72,4 @@ public class FileDTO implements Serializable {
   public void setFileHashcode(String Hashcode) { this.fileHashcode = Hashcode; }
 
   public String getFileHashcode() { return fileHashcode; }
-  public static void main(String[] args) {
-    System.out.println(new FileDTO("annyfile", "dmswns0147", "exe", 324, "20220516124333",
-	"aaannnyyy commment death"));
-        
-  }
 }

@@ -173,3 +173,14 @@ public class LoginFrame extends JFrame implements LoginFrameSetable {
   }
   public static void main(String[] args) { new LoginFrame(); }
 }
+
+/*
+
+추가되어야 할 기능
+
+1. 파일 삭제
+2. 파일 이름, 코멘트 수정
+3. 파일 이름순, 날짜 순, 크기 순 정렬
+4. 유저마다 다른 서버의 디렉터리를 사용해야 함
+
+*/

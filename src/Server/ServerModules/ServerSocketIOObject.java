@@ -36,6 +36,7 @@ public class ServerSocketIOObject implements Runnable {
             RequestHandler.requestHandler(socket, requestLine) + "\r\n");
         bufferedWriter.flush();
       } catch (IOException | NullPointerException e) {
+        e.printStackTrace();
         System.out.println("Maybe msg is null because upload was performed.");
         break;
       }

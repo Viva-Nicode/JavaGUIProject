@@ -3,6 +3,7 @@ package Server.User;
 import Server.Util.DatabaseUtil;
 import Server.Util.EncryptUtil;
 import Server.Util.TaskNumbers;
+import java.io.File;
 import java.io.UnsupportedEncodingException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -70,7 +71,6 @@ public class UserDAO {
 
     Connection connection = DatabaseUtil.getConnection();
 
-    System.out.println("signup DAO");
     if (isOverlapUserid(user.getUserID())) { // id is overlap
       return "{\"responseType\":" +
           TaskNumbers._REQUEST_NOT_PROCESSED_PROPERLY + "}";
@@ -97,6 +97,9 @@ public class UserDAO {
       }
       // 쿼리가 정상 처리 되었다면(정상 회원가입되었다면) 1 반환
       if (pre.executeUpdate() == 1) {
+        File f =
+            new File("/Users/nicode./MainSpace/uploadDir/" + user.getUserID());
+        f.mkdir();
         return "{\"responseType\":" +
             TaskNumbers._REQUEST_SUCCESSFULLY_PROCESSED + "}";
       }

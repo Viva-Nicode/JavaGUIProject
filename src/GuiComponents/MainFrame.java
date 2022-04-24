@@ -86,6 +86,7 @@ public class MainFrame extends JFrame implements setable {
     private JMenu menu;
     private JMenuItem logout;
     private JButton uploadButton;
+    private JButton downloadButton;
     private JButton refreshfilelistButton;
     private String extention = "";
     private DefaultListModel<String> model;
@@ -100,7 +101,7 @@ public class MainFrame extends JFrame implements setable {
       }
       return null;
     }
-    /* update model list, fileDTOlist */
+
     public void updateFilelist(DefaultListModel<String> model)
         throws ClassNotFoundException, IOException {
       c.sender("{\"requestType\":" + TaskNumbers._FILELIST_REQUEST +
@@ -112,6 +113,7 @@ public class MainFrame extends JFrame implements setable {
       if (responseNum == TaskNumbers._REQUEST_SUCCESSFULLY_PROCESSED) {
         JsonArray filelist = jo.get("filelist").getAsJsonArray();
         model.clear();
+        l.clear();
         for (JsonElement filedto : filelist) {
           JsonObject j = filedto.getAsJsonObject();
           String com = j.get("file_comment").getAsString().replace("\f", "\n");
@@ -123,6 +125,7 @@ public class MainFrame extends JFrame implements setable {
         }
       } else {
         model.clear();
+        l.clear();
         model.addElement("not exist any file..!");
       }
     }
@@ -168,6 +171,7 @@ public class MainFrame extends JFrame implements setable {
       setJMenuBar(menubar);
 
       uploadButton = new JButton("upload");
+      downloadButton = new JButton("download");
       refreshfilelistButton = new JButton("refresh");
 
       fileList = new JList<String>(new DefaultListModel());
@@ -211,6 +215,35 @@ public class MainFrame extends JFrame implements setable {
             new FileUploadFrame(
                 new FileDTO(connected_user_id, extention, f.length()), c, f,
                 model);
+          }
+        }
+      });
+
+      downloadButton.setBounds(510, 110, 120, 40);
+      downloadButton.addActionListener(new ActionListener() {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+          if (fileList.getSelectedValue() == null) {
+            JOptionPane.showMessageDialog(null, "please choose file", "omg", 2);
+            return;
+          }
+          fileComponent = new JFileChooser();
+          fileComponent.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+          int ret = fileComponent.showOpenDialog(null);
+          if (ret == JFileChooser.APPROVE_OPTION) {
+            FileDTO t = getSelectItemFileDTO(fileList.getSelectedValue());
+            File f = new File(fileComponent.getSelectedFile().toString() + "/" +
+                              t.getFile_name() + "." + t.getFile_extention());
+            try {
+              f.createNewFile();
+              c.binaryStreamReceiver(f, t, connected_user_id);
+
+              c.Receiver();
+
+            } catch (JsonSyntaxException | ClassNotFoundException |
+                     IOException e1) {
+              e1.printStackTrace();
+            }
           }
         }
       });
@@ -260,6 +293,7 @@ public class MainFrame extends JFrame implements setable {
 
       add(fileList);
       add(uploadButton);
+      add(downloadButton);
       add(refreshfilelistButton);
       add(fip);
 
@@ -282,13 +316,13 @@ public class MainFrame extends JFrame implements setable {
         fileUploadDate = new JLabel();
         fileSize = new JLabel();
         fileCommentLabel = new JTextArea();
-        /* fileCommentLabel.setEnabled(false); */
+        fileCommentLabel.setEnabled(false);
 
         extIconLabel.setBounds(10, 10, 120, 120);
         filenameLabel.setBounds(10, 140, 220, 20);
         fileUploadDate.setBounds(10, 160, 220, 20);
         fileSize.setBounds(10, 180, 220, 20);
-        fileCommentLabel.setBounds(10, 200, 120, 100);
+        fileCommentLabel.setBounds(10, 220, 240, 100);
 
         this.setSize(250, 400);
         this.setLayout(null);

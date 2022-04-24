@@ -30,6 +30,8 @@ public class RequestHandler {
         return FileDAO.getFilelist(jo.get("user_id").getAsString());
       } else if (RquestTypeNum == TaskNumberable._FILEUPLOAD_REQUEST) {
         return FileDAO.insertuploadedfile(so, jsondata);
+      } else if (RquestTypeNum == TaskNumberable._FILEDOWNLOAD_REQUEST) {
+		  return FileDAO.downloadRequestProcessor(so, jsondata);
       }
     } catch (Exception e) {
       e.printStackTrace();

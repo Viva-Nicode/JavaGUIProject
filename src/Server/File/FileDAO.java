@@ -8,6 +8,8 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -76,7 +78,8 @@ public class FileDAO {
 
   public static String insertuploadedfile(final Socket s,
                                           final String filemetadatas)
-      throws IOException, InterruptedException, SQLException {
+      throws IOException, InterruptedException, SQLException,
+             FileNotFoundException {
 
     Thread t = new Thread(new fileIOObject(s, filemetadatas));
     System.out.println("start file Input thread");
@@ -86,6 +89,43 @@ public class FileDAO {
     JsonObject jo = JsonParser.parseString(filemetadatas).getAsJsonObject();
 
     return getFilelist(jo.get("user_id").getAsString());
+  }
+
+  public static String downloadRequestProcessor(final Socket s,
+                                                final String request)
+      throws SQLException, FileNotFoundException, IOException {
+    JsonObject jo = JsonParser.parseString(request).getAsJsonObject();
+
+    String getfilePathquery =
+        "select file_path from uploadedfile where user_id = ? && file_name = ?";
+
+    Connection connection = DatabaseUtil.getConnection();
+    PreparedStatement pre = connection.prepareStatement(getfilePathquery);
+
+    pre.setString(1, jo.get("user_id").getAsString());
+    pre.setString(2, jo.get("file_name").getAsString());
+
+    ResultSet rs = pre.executeQuery();
+    File f;
+    if (rs.next()) {
+      f = new File(rs.getString(1));
+
+      BufferedInputStream bis =
+          new BufferedInputStream(new FileInputStream(f), 4096);
+      BufferedOutputStream bos =
+          new BufferedOutputStream(s.getOutputStream(), 4096);
+      byte[] buffer = new byte[4096];
+      while (bis.read(buffer) > 0) {
+        bos.write(buffer);
+        bos.flush();
+      }
+      bis.close();
+
+      return "{\"responseType\":" +
+          TaskNumbers._REQUEST_SUCCESSFULLY_PROCESSED + "}";
+    }
+    return "{\"responseType\":" + TaskNumbers._REQUEST_NOT_PROCESSED_PROPERLY +
+        "}";
   }
 }
 
@@ -106,7 +146,10 @@ class fileIOObject implements Runnable {
                      jo.get("file_extention").getAsString(),
                      jo.get("file_bytesize").getAsLong(),
                      jo.get("file_comment").getAsString());
-    readupnum = fd.getFile_size() / 4096 + 1;
+    if (fd.getFile_size() % 4096 == 0)
+      readupnum = fd.getFile_size() / 4096;
+    else
+      readupnum = fd.getFile_size() / 4096 + 1;
     bufferedWriter =
         new BufferedWriter(new OutputStreamWriter(c.getOutputStream()));
     bis = new BufferedInputStream(c.getInputStream(), 4096);
@@ -115,19 +158,18 @@ class fileIOObject implements Runnable {
   public void run() {
     System.out.println("run start");
     try {
-      File file = new File("/Users/nicode./MainSpace/testdir/" +
-                           fd.getFile_name() + "." + fd.getFile_extention());
+      File file =
+          new File("/Users/nicode./MainSpace/uploadDir/" + fd.getUser_id() +
+                   "/" + fd.getFile_name() + "." + fd.getFile_extention());
       file.createNewFile();
       bos = new BufferedOutputStream(new FileOutputStream(file), 4096);
-      byte[] allbytedata = new byte[(int)readupnum * 4096];
+
       System.out.println("readupnum : " + readupnum);
 
       bufferedWriter.write(
           "{\"responseType\":" + TaskNumbers._REQUEST_SUCCESSFULLY_PROCESSED +
           "}\r\n");
       bufferedWriter.flush();
-
-      System.out.println("allbytedata len : " + allbytedata.length);
 
       for (int idx = 0; idx < readupnum; idx++) {
         bis.read(buffer);
