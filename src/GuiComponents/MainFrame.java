@@ -122,7 +122,7 @@ public class MainFrame extends JFrame implements setable {
       g.drawImage(background, 0, 0, null);
     }
 
-    public static Optional<String>
+    public Optional<String>
     getExtensionByStringHandling(String filename) {
       return Optional.ofNullable(filename)
           .filter(f -> f.contains("."))

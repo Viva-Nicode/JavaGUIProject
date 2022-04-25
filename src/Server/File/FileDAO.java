@@ -81,12 +81,68 @@ public class FileDAO {
       throws IOException, InterruptedException, SQLException,
              FileNotFoundException {
 
-    Thread t = new Thread(new fileIOObject(s, filemetadatas));
-    System.out.println("start file Input thread");
-    t.start();
-    t.join();
-    System.out.println("finish file Input thread");
-    JsonObject jo = JsonParser.parseString(filemetadatas).getAsJsonObject();
+    BufferedInputStream bis = null;
+    BufferedOutputStream bos = null;
+    long readupnum;
+    byte[] buffer = new byte[4096];
+    BufferedWriter bufferedWriter;
+    JsonObject jo;
+    FileDTO fd;
+
+    jo = JsonParser.parseString(filemetadatas).getAsJsonObject();
+    fd = new FileDTO(jo.get("file_name").getAsString(),
+                     jo.get("user_id").getAsString(),
+                     jo.get("file_extention").getAsString(),
+                     jo.get("file_bytesize").getAsLong(),
+                     jo.get("file_comment").getAsString());
+    if (fd.getFile_size() % 4096 == 0)
+      readupnum = fd.getFile_size() / 4096;
+    else
+      readupnum = fd.getFile_size() / 4096 + 1;
+    bufferedWriter =
+        new BufferedWriter(new OutputStreamWriter(s.getOutputStream()));
+    bis = new BufferedInputStream(s.getInputStream(), 4096);
+    try {
+      File file =
+          new File("/Users/nicode./MainSpace/uploadDir/" + fd.getUser_id() +
+                   "/" + fd.getFile_name() + "." + fd.getFile_extention());
+      file.createNewFile();
+      bos = new BufferedOutputStream(new FileOutputStream(file), 4096);
+
+      System.out.println("readupnum : " + readupnum);
+
+      bufferedWriter.write(
+          "{\"responseType\":" + TaskNumbers._REQUEST_SUCCESSFULLY_PROCESSED +
+          "}\r\n");
+
+      bufferedWriter.flush();
+
+      for (int idx = 0; idx < readupnum; idx++) {
+        bis.read(buffer);
+        System.out.println("readup");
+        bos.write(buffer);
+      }
+
+      /* String hashcode = TaskNumbers.sha256(alldata); */
+
+      String insert_blob_data_query =
+          "INSERT INTO uploadedfile VALUES (?, ?, ?)";
+
+      Connection connection = DatabaseUtil.getConnection();
+      PreparedStatement pre =
+          connection.prepareStatement(insert_blob_data_query);
+
+      pre.setString(1, fd.getFile_name());
+      pre.setString(2, fd.getUser_id());
+      pre.setString(3, file.getPath());
+
+      if (pre.executeUpdate() == 1) {
+        fd.setuploaddate(TaskNumbers.getnow());
+        FileDAO.insertFileMetaData(fd);
+      }
+    } catch (IOException | SQLException /* | NoSuchAlgorithmException */ e) {
+      e.printStackTrace();
+    }
 
     return getFilelist(jo.get("user_id").getAsString());
   }
@@ -155,75 +211,5 @@ public class FileDAO {
 
     return "{\"responseType\":" + TaskNumbers._REQUEST_SUCCESSFULLY_PROCESSED +
         "}";
-  }
-}
-
-class fileIOObject implements Runnable {
-
-  private BufferedInputStream bis = null;
-  private BufferedOutputStream bos = null;
-  private long readupnum;
-  private byte[] buffer = new byte[4096];
-  private BufferedWriter bufferedWriter;
-  private JsonObject jo;
-  private FileDTO fd;
-
-  fileIOObject(Socket c, String filemetadata) throws IOException {
-    jo = JsonParser.parseString(filemetadata).getAsJsonObject();
-    fd = new FileDTO(jo.get("file_name").getAsString(),
-                     jo.get("user_id").getAsString(),
-                     jo.get("file_extention").getAsString(),
-                     jo.get("file_bytesize").getAsLong(),
-                     jo.get("file_comment").getAsString());
-    if (fd.getFile_size() % 4096 == 0)
-      readupnum = fd.getFile_size() / 4096;
-    else
-      readupnum = fd.getFile_size() / 4096 + 1;
-    bufferedWriter =
-        new BufferedWriter(new OutputStreamWriter(c.getOutputStream()));
-    bis = new BufferedInputStream(c.getInputStream(), 4096);
-  }
-  @Override
-  public void run() {
-    System.out.println("run start");
-    try {
-      File file =
-          new File("/Users/nicode./MainSpace/uploadDir/" + fd.getUser_id() +
-                   "/" + fd.getFile_name() + "." + fd.getFile_extention());
-      file.createNewFile();
-      bos = new BufferedOutputStream(new FileOutputStream(file), 4096);
-
-      System.out.println("readupnum : " + readupnum);
-
-      bufferedWriter.write(
-          "{\"responseType\":" + TaskNumbers._REQUEST_SUCCESSFULLY_PROCESSED +
-          "}\r\n");
-      bufferedWriter.flush();
-
-      for (int idx = 0; idx < readupnum; idx++) {
-        bis.read(buffer);
-        bos.write(buffer);
-      }
-
-      /* String hashcode = TaskNumbers.sha256(alldata); */
-
-      String insert_blob_data_query =
-          "INSERT INTO uploadedfile VALUES (?, ?, ?)";
-
-      Connection connection = DatabaseUtil.getConnection();
-      PreparedStatement pre =
-          connection.prepareStatement(insert_blob_data_query);
-
-      pre.setString(1, fd.getFile_name());
-      pre.setString(2, fd.getUser_id());
-      pre.setString(3, file.getPath());
-
-      if (pre.executeUpdate() == 1) {
-        fd.setuploaddate(TaskNumbers.getnow());
-        FileDAO.insertFileMetaData(fd);
-      }
-    } catch (IOException | SQLException /* | NoSuchAlgorithmException */ e) {
-      e.printStackTrace();
-    }
   }
 }
