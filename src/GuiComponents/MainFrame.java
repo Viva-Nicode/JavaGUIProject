@@ -46,7 +46,7 @@ import javax.swing.text.PlainDocument;
 
 interface setable {
   public final int FRAMEWIDTH = 650;
-  public final int FRAMEHEIGHT = 500;
+  public final int FRAMEHEIGHT = 400;
   public final Color jlistBackgroundColor = new Color(000);
 }
 
@@ -79,7 +79,10 @@ public class MainFrame extends JFrame implements setable {
     private JButton uploadButton;
     private JButton downloadButton;
     private JButton deleteButton;
-    private JButton refreshfilelistButton;
+    private JButton modifyButton;
+    private JButton refreshButton;
+    private JButton sortByDate;
+    private JButton sortBySize;
     private String extention = "";
     private DefaultListModel<String> model;
     private fileInfoPrintPanel fip;
@@ -122,8 +125,7 @@ public class MainFrame extends JFrame implements setable {
       g.drawImage(background, 0, 0, null);
     }
 
-    public Optional<String>
-    getExtensionByStringHandling(String filename) {
+    public Optional<String> getExtensionByStringHandling(String filename) {
       return Optional.ofNullable(filename)
           .filter(f -> f.contains("."))
           .map(f -> f.substring(filename.lastIndexOf(".") + 1));
@@ -157,7 +159,10 @@ public class MainFrame extends JFrame implements setable {
       uploadButton = new JButton("upload");
       downloadButton = new JButton("download");
       deleteButton = new JButton("delete");
-      refreshfilelistButton = new JButton("refresh");
+      modifyButton = new JButton("modify");
+      sortByDate = new JButton("sort by date");
+      sortBySize = new JButton("sort by size");
+      refreshButton = new JButton("refresh");
 
       fileList = new JList<String>(new DefaultListModel());
 
@@ -254,8 +259,34 @@ public class MainFrame extends JFrame implements setable {
         }
       });
 
-      refreshfilelistButton.setBounds(510, 150, 120, 40);
-      refreshfilelistButton.addActionListener(new ActionListener() {
+      modifyButton.setBounds(510, 150, 120, 40);
+      modifyButton.addActionListener(new ActionListener() {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+          String selectFilename = fileList.getSelectedValue();
+          if (selectFilename == null) {
+            JOptionPane.showMessageDialog(null, "please choose file", "omg", 2);
+            return;
+          }
+          new ModifyFileInfoDialog(filehashmap, c, connected_user_id,
+                                   selectFilename, model);
+        }
+      });
+
+      sortByDate.setBounds(510, 190, 120, 40);
+      sortByDate.addActionListener(new ActionListener() {
+        @Override
+        public void actionPerformed(ActionEvent e) {}
+      });
+
+      sortBySize.setBounds(510, 230, 120, 40);
+      sortBySize.addActionListener(new ActionListener() {
+        @Override
+        public void actionPerformed(ActionEvent e) {}
+      });
+
+      refreshButton.setBounds(510, 270, 120, 40);
+      refreshButton.addActionListener(new ActionListener() {
         JsonObject jo;
         @Override
         public void actionPerformed(ActionEvent e) {
@@ -303,7 +334,12 @@ public class MainFrame extends JFrame implements setable {
       add(uploadButton);
       add(downloadButton);
       add(deleteButton);
-      add(refreshfilelistButton);
+      add(modifyButton);
+      add(sortByDate);
+      sortByDate.setEnabled(false);
+      add(sortBySize);
+      sortBySize.setEnabled(false);
+      add(refreshButton);
       add(fip);
 
       requestFocus();
@@ -479,6 +515,142 @@ public class MainFrame extends JFrame implements setable {
 
     @Override
     public void actionPerformed(ActionEvent e) {}
+  }
+
+  class JTextFieldLimit extends PlainDocument {
+
+    private int limit;
+
+    public JTextFieldLimit(int limit) {
+      super();
+      this.limit = limit;
+    }
+
+    public void insertString(int offset, String str, AttributeSet attr)
+        throws BadLocationException {
+      if (str == null)
+        return;
+
+      if (getLength() + str.length() <= limit)
+        super.insertString(offset, str, attr);
+    }
+  }
+}
+
+class ModifyFileInfoDialog extends JDialog {
+
+  private HashMap<String, FileDTO> filehashmap;
+  private ClientSocketIOObject c;
+  private String cui;
+  private String selected_filename;
+  private DefaultListModel<String> model;
+  public ModifyFileInfoDialog(HashMap<String, FileDTO> fileHashMap,
+                              final ClientSocketIOObject c, final String cui,
+                              final String selected_Filename,
+                              final DefaultListModel<String> model) {
+    this.c = c;
+    this.model = model;
+    this.cui = cui;
+    this.selected_filename = selected_Filename;
+    this.filehashmap = fileHashMap;
+    this.setTitle("File info modify Window");
+    this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+    this.add(new nameAndCommentInputPanel(), BorderLayout.CENTER);
+    this.setLocationRelativeTo(getOwner());
+    this.setSize(300, 250);
+    this.setVisible(true);
+  }
+
+  class nameAndCommentInputPanel extends JPanel {
+    private JTextField filenametf;
+    private JButton submitbtn;
+    private JTextArea commentta;
+
+    public nameAndCommentInputPanel() {
+      filenametf = new JTextField(20);
+      filenametf.setDocument(new JTextFieldLimit(30));
+      submitbtn = new JButton("submit");
+      commentta = new JTextArea("", 7, 20);
+
+      submitbtn.addActionListener(new ActionListener() {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+          if (filenametf.getText().equals("") ||
+              commentta.getText().equals("") ||
+              filehashmap.containsKey(filenametf.getText())) {
+            JOptionPane.showMessageDialog(
+                null, "please insert name and comment", "omg", 2);
+          } else {
+            String com = commentta.getText().replaceAll("\\R", "\f");
+            c.sender("{\"requestType\":" +
+                     TaskNumbers._FILEINFO_MODIFICATION_REQUEST +
+                     ", \"user_id\":\"" + cui + "\", \"file_name\":\"" +
+                     selected_filename + "\", \"new_filename\":\"" +
+                     filenametf.getText() + "\", \"new_fileComment\":\"" + com +
+                     "\"}");
+            try {
+              c.Receiver();
+              c.sender("{\"requestType\":" + TaskNumbers._FILELIST_REQUEST +
+                       ",\"user_id\":\"" + cui + "\""
+                       + "}");
+              JsonObject jo =
+                  JsonParser.parseString(c.Receiver()).getAsJsonObject();
+              int responseNum = jo.get("responseType").getAsInt();
+
+              if (responseNum == TaskNumbers._REQUEST_SUCCESSFULLY_PROCESSED) {
+                JsonArray filelist = jo.get("filelist").getAsJsonArray();
+                model.clear();
+                filehashmap.clear();
+                for (JsonElement filedto : filelist) {
+                  JsonObject j = filedto.getAsJsonObject();
+                  String comm =
+                      j.get("file_comment").getAsString().replace("\f", "\n");
+                  filehashmap.put(
+                      j.get("file_name").getAsString(),
+                      new FileDTO(j.get("file_name").getAsString(),
+                                  j.get("file_extention").getAsString(),
+                                  j.get("file_bytesize").getAsLong(),
+                                  j.get("upload_date").getAsString(), comm));
+                  model.addElement(j.get("file_name").getAsString());
+                }
+              } else {
+                model.clear();
+                filehashmap.clear();
+                model.addElement("not exist any file..!");
+              }
+              dispose();
+            } catch (ClassNotFoundException | IOException e1) {
+              e1.printStackTrace();
+            }
+          }
+        }
+      });
+
+      commentta.addKeyListener(new KeyListener() {
+        @Override
+        public void keyTyped(KeyEvent e) {
+          int max = 60;
+          int textLen = commentta.getText().length();
+          if (textLen > max + 1) {
+            e.consume();
+            String shortened = commentta.getText().substring(0, max);
+            commentta.setText(shortened);
+          } else if (textLen > max) {
+            e.consume();
+          }
+        }
+        @Override
+        public void keyPressed(KeyEvent e) {}
+
+        @Override
+        public void keyReleased(KeyEvent e) {}
+      });
+
+      this.add(filenametf);
+      this.add(new JScrollPane(commentta));
+      this.add(submitbtn);
+      this.setVisible(true);
+    }
   }
 
   class JTextFieldLimit extends PlainDocument {

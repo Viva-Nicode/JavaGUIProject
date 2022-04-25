@@ -184,6 +184,38 @@ public class FileDAO {
         "}";
   }
 
+  public static String modifyFileInfo(final Socket c,
+                                      final String modifyRequest)
+      throws SQLException {
+    JsonObject jo = JsonParser.parseString(modifyRequest).getAsJsonObject();
+
+    String modifyFileInfoQuery =
+        "update uploadedfile set file_name = ? where user_id = ? && file_name = ?";
+
+    Connection connection = DatabaseUtil.getConnection();
+    PreparedStatement pre = connection.prepareStatement(modifyFileInfoQuery);
+
+    pre.setString(1, jo.get("new_filename").getAsString());
+    pre.setString(2, jo.get("user_id").getAsString());
+    pre.setString(3, jo.get("file_name").getAsString());
+
+    pre.executeUpdate();
+
+    modifyFileInfoQuery =
+        "update filemetadata set file_comment = ? where user_id = ? && file_name = ?";
+
+    pre = connection.prepareStatement(modifyFileInfoQuery);
+
+    pre.setString(1, jo.get("new_fileComment").getAsString());
+    pre.setString(2, jo.get("user_id").getAsString());
+    pre.setString(3, jo.get("new_filename").getAsString());
+
+    pre.executeUpdate();
+
+    return "{\"responseType\":" + TaskNumbers._REQUEST_SUCCESSFULLY_PROCESSED +
+        "}";
+  }
+
   public static String deleteFile(final Socket s, final String deleteRequest)
       throws SQLException {
 

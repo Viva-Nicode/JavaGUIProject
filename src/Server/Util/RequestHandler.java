@@ -34,6 +34,9 @@ public class RequestHandler {
         return FileDAO.downloadRequestProcessor(so, jsondata);
       } else if (RquestTypeNum == TaskNumberable._FILEDELETE_REQUEST) {
         return FileDAO.deleteFile(so, jsondata);
+      } else if (RquestTypeNum ==
+                 TaskNumberable._FILEINFO_MODIFICATION_REQUEST) {
+        return FileDAO.modifyFileInfo(so, jsondata);
       }
     } catch (Exception e) {
       e.printStackTrace();
