@@ -37,7 +37,7 @@ public class ServerSocketIOObject implements Runnable {
         bufferedWriter.flush();
       } catch (IOException | NullPointerException e) {
         e.printStackTrace();
-        System.out.println("Maybe msg is null because upload was performed.");
+        System.out.println("Occured Exception in ServerSocketIOObject.java");
         break;
       }
     }

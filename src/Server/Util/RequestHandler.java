@@ -44,4 +44,3 @@ public class RequestHandler {
     return null;
   }
 }
-/* 각종 DAO들안에 구현된 static 함수들은 직렬화 클래스를 반환해야함 */

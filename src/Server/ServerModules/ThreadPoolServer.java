@@ -20,7 +20,7 @@ public class ThreadPoolServer {
         Socket s = listener.accept();
         System.out.println("pid : " + ProcessHandle.current().pid());
         threadpool.execute(new ServerSocketIOObject(s));
-        System.out.println(s.getLocalAddress() + " is Connect");
+        System.out.println(s.getLocalSocketAddress() + " is Connect");
       }
     }
   }
