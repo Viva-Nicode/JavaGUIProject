@@ -1,7 +1,7 @@
 package Client;
 
-import Server.File.FileDTO;
-import Server.Util.TaskNumbers;
+import Common.FileDTO;
+import Common.TaskNumbers;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
